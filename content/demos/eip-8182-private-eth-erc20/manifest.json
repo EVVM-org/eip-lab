@@ -1,0 +1,91 @@
+{
+  "$schema": "https://raw.githubusercontent.com/EVVM-org/EIPskillevvmsandbox/main/schema/manifest.schema.json",
+  "eip": {
+    "number": "8182",
+    "title": "Private ETH and ERC-20 Transfers",
+    "url": "https://eips.ethereum.org/EIPS/eip-8182",
+    "status": "Draft"
+  },
+  "experiment": {
+    "slug": "private-eth-erc20",
+    "created": "2026-05-25",
+    "hypothesis": "The contract-layer state machine of EIP-8182's shielded pool (nullifier uniqueness, intent replay protection, auth-policy registry rotation window, pluggable auth verifier dispatch via staticcall) holds under the EIP's invariants when the cryptographic substrates are admin-controlled mocks. The split-proof architecture's separation of concerns is faithful to the EIP; only the cryptographic strength is stubbed.",
+    "shape": "B"
+  },
+  "requires": [
+    {
+      "eip": "20",
+      "satisfied_by": "standard-library",
+      "notes": "OpenZeppelin's IERC20 + ERC20 reference impl. Researchers can use their preferred MockERC20 for testing."
+    }
+  ],
+  "mocks": [
+    {
+      "name": "MockPoolVerifier",
+      "stubs": "Groth16 BN254 verification (EIP §5.5)",
+      "strategy": "mock",
+      "reason": "Real verifier requires a trusted-setup ceremony per the pool circuit and is gas-prohibitive in a research sandbox (~250k gas per verify). Admin-controlled verdicts let researchers exercise the state machine deterministically.",
+      "limitation": "NO cryptographic security. Verdicts are admin-set. Acceptable only because this experiment proves the contract-layer state machine; any claim about the proof system itself requires a real verifier."
+    },
+    {
+      "name": "MockPoseidon",
+      "stubs": "Poseidon2 hash over BN254 scalar field (EIP §3.3)",
+      "strategy": "mock",
+      "reason": "Poseidon2 is not an EVM opcode. Vendored Solidity ports exist but are slow (~50k gas per hash). Our mock uses keccak with matched domain separators so the contract-layer state machine has deterministic, collision-free behavior for tests.",
+      "limitation": "NOT a real Poseidon. Circuit-generated hashes will not match. Tree roots in this experiment are keccak-based, not Poseidon-real. Acceptable for testing the contract state machine; NOT acceptable for any cryptographic claims about commitment binding."
+    },
+    {
+      "name": "MockECDSAAuthVerifier",
+      "stubs": "User-pluggable auth circuit + verifier (EIP §11)",
+      "strategy": "mock",
+      "reason": "Real auth verifiers wrap a ZK proof of authentication. Our reference auth verifier just checks an ECDSA signature against authDataCommitment — enough to exercise the registry-dispatch path, the policy-set membership check, and the auth-proof public-output coupling.",
+      "limitation": "Not a ZK proof. No knowledge-of-secret guarantee; the 'auth proof' is just an ECDSA signature byteblob. Demonstrates the contract integration only."
+    },
+    {
+      "name": "MockDummyAuthVerifier",
+      "stubs": "Auth verifier (adversarial baseline)",
+      "strategy": "mock",
+      "reason": "Always-returns-true verifier. Researchers wire it in to probe 'what happens if auth verification is broken' — confirms the pool's safety boundary depends on more than the auth circuit alone.",
+      "limitation": "By design has no security at all. Production use would be a critical vulnerability."
+    }
+  ],
+  "contracts": [
+    {
+      "path": "contracts/ShieldedPool.sol",
+      "type": "new-service",
+      "why": "The canonical system contract per EIP §5. Implements `transact`, `deposit`, plus the 13-step transact execution order (§5.4.1). Modeled as a Shape B new service extending EvvmService because the privacy infrastructure is additive — it doesn't modify Core, doesn't change EVVM's payment surface, and integrates via Core's existing public methods (`getPrincipalTokenAddress`, etc.). In production, this is the contract that gets installed at `SHIELDED_POOL_ADDRESS = 0x...081820` at fork activation; here it deploys normally and the deploy script would `vm.etch` for canonical fidelity.",
+      "docsLink": "https://www.evvm.info/docs/HowToMakeAEVVMService"
+    },
+    {
+      "path": "contracts/AuthRegistry.sol",
+      "type": "new-service",
+      "why": "Owns the depth-32 sparse Merkle tree, root history, and per-user identity binding per EIP §6. Split out of ShieldedPool for review clarity — the auth-policy registry is conceptually separate from the note-spending logic, and separating them lets each be reasoned about independently. Both contracts use MockPoseidon for tree hashes; both share the same limitation (not collision-equivalent to real Poseidon).",
+      "docsLink": "https://www.evvm.info/docs/HowToMakeAEVVMService"
+    },
+    {
+      "path": "contracts/MockPoolVerifier.sol",
+      "type": "mock-contract",
+      "why": "Admin-controlled stub matching what a Groth16 BN254 verifier exposes (verify(publicInputsHash, proof) → bool). Lets adversarial scenarios deterministically flip valid↔invalid without touching real cryptographic infrastructure.",
+      "docsLink": null
+    },
+    {
+      "path": "contracts/MockPoseidon.sol",
+      "type": "mock-contract",
+      "why": "Keccak-based stub matching Poseidon2's calling convention and EIP-8182's domain-separation scheme. Lets the Merkle trees in ShieldedPool and AuthRegistry produce deterministic roots without paying the real-Poseidon gas cost.",
+      "docsLink": null
+    },
+    {
+      "path": "contracts/MockECDSAAuthVerifier.sol",
+      "type": "mock-contract",
+      "why": "Reference auth verifier implementing the IAuthVerifier interface that ShieldedPool dispatches to via staticcall. Demonstrates the contract integration for the pluggable-verifier pattern (EIP §11). Real auth verifiers would wrap a ZK proof of credential possession; this one is just an ECDSA signature check, which is enough to exercise the protocol surface.",
+      "docsLink": null
+    },
+    {
+      "path": "contracts/MockDummyAuthVerifier.sol",
+      "type": "mock-contract",
+      "why": "Always-returns-true auth verifier. Researchers wire it in for adversarial scenarios to confirm the pool's safety boundary doesn't depend on the auth circuit alone (i.e., that the pool proof and the auth proof must BOTH be valid for a transact to succeed).",
+      "docsLink": null
+    }
+  ],
+  "justification": "justification.md"
+}
