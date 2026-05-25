@@ -1,0 +1,54 @@
+import type { Metadata } from "next";
+import { VT323 } from "next/font/google";
+import { GeistMono } from "geist/font/mono";
+import Nav from "@/components/chrome/Nav";
+import Footer from "@/components/chrome/Footer";
+import Scanlines from "@/components/chrome/Scanlines";
+import { SITE } from "@/lib/constants";
+import "./globals.css";
+
+const vt323 = VT323({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-vt323",
+  display: "swap",
+});
+
+export const metadata: Metadata = {
+  title: {
+    default: `${SITE.name} — ${SITE.tagline}`,
+    template: `%s · ${SITE.name}`,
+  },
+  description: SITE.description,
+  openGraph: {
+    title: SITE.name,
+    description: SITE.tagline,
+    type: "website",
+    url: SITE.url,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE.name,
+    description: SITE.tagline,
+  },
+  icons: {
+    icon: "/favicon.svg",
+  },
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en" className={`${GeistMono.variable} ${vt323.variable}`}>
+      <body className="scanlines vignette min-h-screen">
+        <Scanlines />
+        <Nav />
+        <main>{children}</main>
+        <Footer />
+      </body>
+    </html>
+  );
+}
