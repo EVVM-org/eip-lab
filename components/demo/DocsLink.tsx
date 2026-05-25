@@ -16,9 +16,10 @@ export default function DocsLink({
         href={href}
         target="_blank"
         rel="noreferrer"
-        title="View on evvm.info"
-        aria-label="View on evvm.info"
-        className={`inline-flex h-5 w-5 items-center justify-center rounded-sm border border-[var(--color-border)] text-[10px] text-[var(--color-text-muted)] transition hover:border-[var(--color-neon-cyan)] hover:text-[var(--color-neon-cyan)] ${className}`}
+        title="view on evvm.info"
+        aria-label="view on evvm.info"
+        className={`inline-flex h-5 w-5 items-center justify-center border text-[10px] text-[var(--color-text-muted)] transition hover:border-[var(--color-vp-cyan)] hover:text-[var(--color-vp-cyan)] ${className}`}
+        style={{ borderColor: "rgba(255,255,255,0.15)" }}
         onClick={(e) => e.stopPropagation()}
       >
         ↗
@@ -31,7 +32,8 @@ export default function DocsLink({
       href={href}
       target="_blank"
       rel="noreferrer"
-      className={`inline-flex items-center gap-1.5 rounded-sm border border-[var(--color-border)] bg-[var(--color-bg-panel)] px-3 py-1 text-xs text-[var(--color-neon-cyan)] transition hover:border-[var(--color-neon-cyan)] hover:bg-[rgba(0,245,255,0.08)] ${className}`}
+      className={`inline-flex items-center gap-1.5 border bg-[var(--color-bg-card)] px-3 py-1 text-xs text-[var(--color-vp-cyan)] transition hover:border-[var(--color-vp-cyan)] hover:bg-[rgba(1,205,254,0.08)] ${className}`}
+      style={{ borderColor: "rgba(255,255,255,0.15)" }}
     >
       <span>view on evvm.info</span>
       <span className="opacity-70">↗</span>

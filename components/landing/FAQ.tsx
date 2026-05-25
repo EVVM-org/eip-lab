@@ -1,4 +1,5 @@
-import GlowText from "@/components/ui/GlowText";
+import WindowFrame from "@/components/ui/WindowFrame";
+import GlitchText from "@/components/ui/GlitchText";
 import { DOCS, SITE } from "@/lib/constants";
 
 interface QA {
@@ -12,12 +13,9 @@ const QAS: QA[] = [
     a: (
       <>
         Not on this site. EIPLab is an agent skill — you install it in your
-        editor (Claude Code, Cursor, etc.) alongside a{" "}
-        <a href={SITE.scaffoldEvvm} target="_blank" rel="noreferrer">
-          scaffold-evvm
-        </a>{" "}
-        checkout, then ask your agent to prototype any EIP. This site is the
-        marketing demo for what the skill produces.
+        editor (Claude Code, Cursor, etc.) and ask your agent to prototype
+        any EIP. This site is the marketing demo for what the skill
+        produces.
       </>
     ),
   },
@@ -25,22 +23,29 @@ const QAS: QA[] = [
     q: "What does the skill actually output?",
     a: (
       <>
-        Per experiment: a folder under <code>scaffold-evvm/experiments/</code>{" "}
-        containing the <code>.sol</code> files (modified core, new services,
-        mocks), a <code>justification.md</code> document explaining each
-        contract, and a <code>manifest.json</code> tracking dependencies and
-        mock limitations. Nothing else — no tests, no deploys, no EIP drafts.
+        Per experiment: a folder containing the{" "}
+        <code>.sol</code> files (modified core, new services, mocks), a{" "}
+        <code>justification.md</code> document explaining each contract,
+        and a <code>manifest.json</code> tracking dependencies and mock
+        limitations. That&apos;s it.
       </>
     ),
   },
   {
-    q: "Why no tests or deploy scripts?",
+    q: "What's the recommended way to actually use the contracts?",
     a: (
       <>
-        Deliberate scope. Researchers tend to already have a Foundry/Hardhat
-        test pipeline they trust. Bundling our opinions on top creates
-        friction without adding value. The skill produces the contracts;
-        you wire them into your tests.
+        Drop them into{" "}
+        <a href={SITE.scaffoldEvvm} target="_blank" rel="noreferrer">
+          scaffold-evvm
+        </a>
+        . It runs a full local EVVM stack on Anvil or Hardhat Network, the
+        wizard handles deployment, and the contracts EIPLab produces fit
+        straight into <code>experiments/eip-N-slug/</code>. See the{" "}
+        <a href={DOCS.scaffoldEvvm} target="_blank" rel="noreferrer">
+          scaffold-evvm docs
+        </a>{" "}
+        for setup.
       </>
     ),
   },
@@ -60,10 +65,10 @@ const QAS: QA[] = [
     q: "What about really large EIPs (8141-style)?",
     a: (
       <>
-        The skill refuses single experiments when more than ~5 distinct mocks
-        are needed, and proposes decomposition into sub-experiments instead.
-        Each sub-experiment has its own clean dependency slice. Better to
-        ship three small experiments than one tangled one.
+        The skill refuses single experiments when more than ~5 distinct
+        mocks are needed and proposes decomposition into sub-experiments
+        instead. Each sub-experiment has its own clean dependency slice.
+        Better to ship three small experiments than one tangled one.
       </>
     ),
   },
@@ -71,12 +76,13 @@ const QAS: QA[] = [
     q: "Is it open source?",
     a: (
       <>
-        Yes. The frontend and the skill are both under the{" "}
+        Yes. Both the frontend and the skill are under the{" "}
         <a href={DOCS.license} target="_blank" rel="noreferrer">
           EVVM Noncommercial License v1.0
         </a>
-        . Free for research, personal, and noncommercial use. Commercial use
-        requires a separate license — contact <code>g@evvm.org</code>.
+        . Free for research, personal, and noncommercial use. Commercial
+        use requires a separate license — contact{" "}
+        <code>g@evvm.org</code>.
       </>
     ),
   },
@@ -84,26 +90,22 @@ const QAS: QA[] = [
     q: "Which AI agents work with this skill?",
     a: (
       <>
-        Any agent that loads SKILL.md-format skills from a project's{" "}
-        <code>.claude/skills/</code> (or equivalent) directory. That includes
-        Claude Code, Cursor, GitHub Copilot, Aider, and any custom agent
-        built against the open skill standard. The skill itself is
+        Any agent that loads SKILL.md-format skills from a project&apos;s{" "}
+        <code>.claude/skills/</code> (or equivalent) directory. Claude
+        Code, Cursor, GitHub Copilot, Aider, and any custom agent built
+        against the open skill standard. The skill itself is
         agent-agnostic.
       </>
     ),
   },
   {
-    q: "What's the recommended way to actually test the contracts?",
+    q: "Why a separate skill instead of a hosted service?",
     a: (
       <>
-        Use{" "}
-        <a href={DOCS.scaffoldEvvm} target="_blank" rel="noreferrer">
-          scaffold-evvm
-        </a>{" "}
-        — it runs a full local EVVM stack on Anvil or Hardhat Network, with
-        the wizard handling deployment. The contracts the skill produces
-        drop straight into <code>experiments/</code> and compile against the
-        local stack.
+        Researchers already have the agent running locally with full
+        context of their codebase. Shipping EIPLab as a skill means it
+        composes with everything else they&apos;ve set up — no API keys, no
+        rate limits, no data leaving their machine.
       </>
     ),
   },
@@ -111,37 +113,37 @@ const QAS: QA[] = [
 
 export default function FAQ() {
   return (
-    <section id="faq" className="mx-auto max-w-4xl px-6 py-24">
-      <header className="mb-12">
-        <p className="mb-2 text-xs uppercase tracking-widest text-[var(--color-text-dim)]">
+    <section id="faq" className="mx-auto max-w-4xl px-4 py-20">
+      <header className="mb-10">
+        <p className="mb-2 font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-widest text-[var(--color-text-dim)]">
           // questions
         </p>
-        <h2 className="text-4xl md:text-5xl">
-          <GlowText color="phosphor" display>
-            FAQ.txt
-          </GlowText>
+        <h2 className="text-4xl leading-tight md:text-5xl">
+          <GlitchText color="mint">faq.txt</GlitchText>
         </h2>
       </header>
 
-      <div className="space-y-4">
-        {QAS.map((qa, i) => (
-          <details
-            key={qa.q}
-            className="panel group cursor-pointer p-5 hover:border-[var(--color-neon-purple)]"
-            open={i === 0}
-          >
-            <summary className="flex cursor-pointer list-none items-start gap-3 text-base font-medium text-[var(--color-text)]">
-              <span className="text-[var(--color-neon-cyan)] glow-cyan">
-                ›
-              </span>
-              <span className="flex-1">{qa.q}</span>
-            </summary>
-            <div className="mt-4 pl-6 text-sm leading-relaxed text-[var(--color-text-muted)]">
-              {qa.a}
-            </div>
-          </details>
-        ))}
-      </div>
+      <WindowFrame title="~/eiplab/faq" accent="mint" flush>
+        <div className="divide-y divide-[rgba(255,255,255,0.06)]">
+          {QAS.map((qa, i) => (
+            <details
+              key={qa.q}
+              className="group cursor-pointer px-5 py-4"
+              open={i === 0}
+            >
+              <summary className="flex cursor-pointer list-none items-start gap-3 text-base font-medium text-[var(--color-text)] outline-none">
+                <span className="text-[var(--color-vp-mint)] glow-mint transition-transform group-open:rotate-90">
+                  ›
+                </span>
+                <span className="flex-1">{qa.q}</span>
+              </summary>
+              <div className="mt-3 pl-6 text-sm leading-relaxed text-[var(--color-text-muted)]">
+                {qa.a}
+              </div>
+            </details>
+          ))}
+        </div>
+      </WindowFrame>
     </section>
   );
 }

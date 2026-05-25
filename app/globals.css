@@ -1,77 +1,98 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #0a0014;
-  --color-bg-card: #1a0a2e;
-  --color-bg-panel: #15082a;
-  --color-bg-elevated: #200d3a;
+  /* ── Vaporwave palette (from ui-ux-pro-max styles.csv) ── */
+  --color-vp-pink: #FF71CE;
+  --color-vp-cyan: #01CDFE;
+  --color-vp-purple: #B967FF;
+  --color-vp-mint: #05FFA1;
+  --color-vp-yellow: #FFFB96;
 
+  /* ── Cyberpunk + terminal accents ── */
   --color-neon-pink: #ff006e;
   --color-neon-cyan: #00f5ff;
-  --color-neon-purple: #a855f7;
-  --color-phosphor: #00ff41;
+  --color-neon-magenta: #ff00ff;
+  --color-matrix: #33ff41;
+  --color-phosphor: #33ff41;
   --color-amber: #ffb000;
 
+  /* ── Win98 chrome (the OS layer) ── */
+  --color-win-gray: #c0c0c0;
+  --color-win-gray-dark: #808080;
+  --color-win-gray-darker: #404040;
+  --color-win-white: #ffffff;
+  --color-win-black: #000000;
+  --color-win-titlebar: #FF71CE;       /* vaporwave-tinted instead of classic blue */
+  --color-win-titlebar-2: #B967FF;
+  --color-win-titlebar-inactive: #808080;
+
+  /* ── Deep backgrounds ── */
+  --color-bg-deep: #0a0014;
+  --color-bg-card: #0d0d15;            /* darker for terminal interior */
+  --color-bg-panel: #15082a;
+
+  /* ── Text ── */
   --color-text: #f0e7ff;
-  --color-text-muted: #8b7aa8;
+  --color-text-muted: #a89cc4;
   --color-text-dim: #5a4779;
 
-  --color-border: #2d1b4e;
-  --color-border-hover: #a855f7;
-  --color-border-active: #ff006e;
-
+  /* ── Fonts ── */
   --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular,
     Menlo, Consolas, monospace;
   --font-display: "VT323", "Geist Mono", monospace;
+  --font-pixel: "Press Start 2P", "VT323", monospace;
+  --font-system: Tahoma, Verdana, Geneva, sans-serif;  /* Win98-era system font */
 }
 
 @layer base {
   html {
-    background: var(--color-bg);
+    background: var(--color-bg-deep);
     color: var(--color-text);
     font-family: var(--font-mono);
     scroll-behavior: smooth;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
+    image-rendering: pixelated;
   }
 
   body {
     min-height: 100vh;
     overflow-x: hidden;
-    background:
-      radial-gradient(ellipse at top, rgba(168, 85, 247, 0.12) 0%, transparent 50%),
-      radial-gradient(ellipse at bottom, rgba(255, 0, 110, 0.08) 0%, transparent 50%),
-      var(--color-bg);
-    background-attachment: fixed;
+    padding-bottom: 60px;   /* room for the taskbar */
   }
 
   ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 16px;
+    height: 16px;
   }
   ::-webkit-scrollbar-track {
-    background: var(--color-bg);
+    background: var(--color-win-gray);
   }
   ::-webkit-scrollbar-thumb {
-    background: var(--color-border);
-    border-radius: 5px;
+    background: var(--color-win-gray);
+    border: 2px solid;
+    border-color: var(--color-win-white) var(--color-win-gray-darker)
+      var(--color-win-gray-darker) var(--color-win-white);
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--color-neon-purple);
+    background: var(--color-win-gray-dark);
+  }
+  ::-webkit-scrollbar-corner {
+    background: var(--color-win-gray);
   }
 
   ::selection {
-    background: var(--color-neon-pink);
-    color: var(--color-bg);
+    background: var(--color-vp-pink);
+    color: var(--color-win-black);
   }
 
   a {
-    color: var(--color-neon-cyan);
+    color: var(--color-vp-cyan);
     text-decoration: none;
-    transition: filter 0.15s ease;
+    transition: filter 0.12s ease;
   }
   a:hover {
-    filter: brightness(1.3) drop-shadow(0 0 6px var(--color-neon-cyan));
+    filter: brightness(1.4) drop-shadow(0 0 6px var(--color-vp-cyan));
   }
 
   h1, h2, h3, h4 {
@@ -82,24 +103,27 @@
 }
 
 @layer utilities {
-  /* Scanlines overlay (applied to body via class) */
+  /* ════════════════════════════════════════════════════════════════
+     CRT OVERLAY — scanlines + flicker + vignette
+     Applied via classes on <body>. Layered so vignette wraps scanlines.
+     ════════════════════════════════════════════════════════════════ */
   .scanlines::before {
     content: "";
     position: fixed;
     inset: 0;
     pointer-events: none;
-    background: repeating-linear-gradient(
-      to bottom,
-      transparent 0,
-      transparent 2px,
-      rgba(168, 85, 247, 0.03) 2px,
-      rgba(168, 85, 247, 0.03) 4px
-    );
+    background:
+      repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent 2px,
+        rgba(0, 0, 0, 0.18) 2px,
+        rgba(0, 0, 0, 0.18) 4px
+      );
     z-index: 100;
-    mix-blend-mode: overlay;
+    mix-blend-mode: multiply;
   }
 
-  /* CRT vignette */
   .vignette::after {
     content: "";
     position: fixed;
@@ -107,122 +131,223 @@
     pointer-events: none;
     background: radial-gradient(
       ellipse at center,
-      transparent 60%,
-      rgba(10, 0, 20, 0.4) 100%
+      transparent 50%,
+      rgba(10, 0, 20, 0.55) 100%
     );
     z-index: 99;
   }
 
-  /* Neon glows for text */
-  .glow-pink {
-    text-shadow:
-      0 0 8px var(--color-neon-pink),
-      0 0 16px rgba(255, 0, 110, 0.5);
+  /* ════════════════════════════════════════════════════════════════
+     WIN98 3D BEVEL CHROME
+     Two flavors via box-shadow tricks. No border-radius.
+     ════════════════════════════════════════════════════════════════ */
+  .bevel-raised {
+    background: var(--color-win-gray);
+    box-shadow:
+      inset 1px 1px 0 var(--color-win-white),
+      inset -1px -1px 0 var(--color-win-gray-darker),
+      inset 2px 2px 0 var(--color-win-gray),
+      inset -2px -2px 0 var(--color-win-gray-dark);
   }
-  .glow-cyan {
-    text-shadow:
-      0 0 8px var(--color-neon-cyan),
-      0 0 16px rgba(0, 245, 255, 0.5);
+  .bevel-raised-thick {
+    background: var(--color-win-gray);
+    box-shadow:
+      inset 2px 2px 0 var(--color-win-white),
+      inset -2px -2px 0 var(--color-win-gray-darker),
+      inset 4px 4px 0 var(--color-win-gray),
+      inset -4px -4px 0 var(--color-win-gray-dark);
   }
-  .glow-purple {
-    text-shadow:
-      0 0 8px var(--color-neon-purple),
-      0 0 16px rgba(168, 85, 247, 0.5);
+  .bevel-sunken {
+    background: var(--color-win-gray);
+    box-shadow:
+      inset 1px 1px 0 var(--color-win-gray-darker),
+      inset -1px -1px 0 var(--color-win-white),
+      inset 2px 2px 0 var(--color-win-gray-dark),
+      inset -2px -2px 0 var(--color-win-gray);
   }
-  .glow-phosphor {
-    text-shadow:
-      0 0 8px var(--color-phosphor),
-      0 0 16px rgba(0, 255, 65, 0.4);
+  .bevel-active {
+    /* what a 'raised' button looks like when pressed */
+    background: var(--color-win-gray);
+    box-shadow:
+      inset 1px 1px 0 var(--color-win-gray-darker),
+      inset -1px -1px 0 var(--color-win-white),
+      inset 2px 2px 0 var(--color-win-gray-dark);
   }
 
-  /* Neon glows for borders */
-  .border-glow-pink {
+  /* Win98 outer window border (used by WindowFrame) */
+  .win98-window {
+    background: var(--color-win-gray);
     box-shadow:
-      0 0 12px rgba(255, 0, 110, 0.4),
-      inset 0 0 8px rgba(255, 0, 110, 0.08);
-  }
-  .border-glow-cyan {
-    box-shadow:
-      0 0 12px rgba(0, 245, 255, 0.4),
-      inset 0 0 8px rgba(0, 245, 255, 0.08);
-  }
-  .border-glow-purple {
-    box-shadow:
-      0 0 12px rgba(168, 85, 247, 0.4),
-      inset 0 0 8px rgba(168, 85, 247, 0.08);
+      inset 1px 1px 0 var(--color-win-white),
+      inset -1px -1px 0 var(--color-win-gray-darker),
+      inset 2px 2px 0 var(--color-win-gray),
+      inset -2px -2px 0 var(--color-win-gray-dark);
+    image-rendering: pixelated;
   }
 
-  /* Grid background (hero only) */
-  .grid-bg {
+  /* ════════════════════════════════════════════════════════════════
+     NEON GLOWS
+     ════════════════════════════════════════════════════════════════ */
+  .glow-pink { text-shadow: 0 0 6px var(--color-vp-pink), 0 0 14px rgba(255, 113, 206, 0.6); }
+  .glow-cyan { text-shadow: 0 0 6px var(--color-vp-cyan), 0 0 14px rgba(1, 205, 254, 0.6); }
+  .glow-purple { text-shadow: 0 0 6px var(--color-vp-purple), 0 0 14px rgba(185, 103, 255, 0.6); }
+  .glow-mint { text-shadow: 0 0 6px var(--color-vp-mint), 0 0 14px rgba(5, 255, 161, 0.5); }
+  .glow-matrix { text-shadow: 0 0 6px var(--color-matrix), 0 0 12px rgba(51, 255, 65, 0.5); }
+  .glow-magenta { text-shadow: 0 0 6px var(--color-neon-magenta), 0 0 14px rgba(255, 0, 255, 0.5); }
+
+  .border-glow-pink { box-shadow: 0 0 8px rgba(255, 113, 206, 0.7), 0 0 24px rgba(255, 113, 206, 0.3); }
+  .border-glow-cyan { box-shadow: 0 0 8px rgba(1, 205, 254, 0.7), 0 0 24px rgba(1, 205, 254, 0.3); }
+  .border-glow-purple { box-shadow: 0 0 8px rgba(185, 103, 255, 0.7), 0 0 24px rgba(185, 103, 255, 0.3); }
+  .border-glow-matrix { box-shadow: 0 0 8px rgba(51, 255, 65, 0.6), 0 0 24px rgba(51, 255, 65, 0.25); }
+
+  /* ════════════════════════════════════════════════════════════════
+     DESKTOP BG — vaporwave grid + sun horizon
+     Fixed full-screen background. Independent of content.
+     ════════════════════════════════════════════════════════════════ */
+  .desktop-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 800px 400px at 50% 60%, rgba(255, 113, 206, 0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 600px 500px at 50% 90%, rgba(185, 103, 255, 0.22) 0%, transparent 60%),
+      linear-gradient(180deg, #1a0033 0%, #2d0b5a 30%, #3d1166 50%, #5a0f5a 70%, #1a0033 100%);
+  }
+  .desktop-grid {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
     background-image:
-      linear-gradient(rgba(168, 85, 247, 0.06) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(168, 85, 247, 0.06) 1px, transparent 1px);
-    background-size: 40px 40px;
+      linear-gradient(rgba(255, 113, 206, 0.15) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(1, 205, 254, 0.15) 1px, transparent 1px);
+    background-size: 60px 60px;
+    background-position: center bottom;
+    transform-origin: center bottom;
+    /* Tilt the grid to look like a vaporwave horizon plane */
+    mask-image: linear-gradient(to bottom, transparent 40%, black 70%, transparent 95%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 40%, black 70%, transparent 95%);
   }
-
-  /* Sun horizon (vaporwave classic) */
-  .sun-horizon {
-    background: linear-gradient(
-      to bottom,
-      transparent 0%,
-      transparent 49%,
-      rgba(168, 85, 247, 0.6) 50%,
-      rgba(168, 85, 247, 0.4) 52%,
-      transparent 53%,
-      transparent 60%,
-      rgba(255, 0, 110, 0.4) 61%,
-      transparent 63%,
-      transparent 70%,
-      rgba(0, 245, 255, 0.3) 71%,
-      transparent 73%,
-      transparent 100%
+  .desktop-sun {
+    position: fixed;
+    left: 50%;
+    top: 30%;
+    transform: translate(-50%, -50%);
+    width: 480px;
+    height: 480px;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(
+      circle at center,
+      #FFFB96 0%,
+      #FF71CE 40%,
+      #B967FF 70%,
+      transparent 80%
     );
+    border-radius: 50%;
+    opacity: 0.55;
+    filter: blur(2px);
+    mask-image: linear-gradient(to bottom,
+      black 0%, black 50%, transparent 52%,
+      black 56%, transparent 58%,
+      black 62%, transparent 64%,
+      black 68%, transparent 70%,
+      black 76%, transparent 78%,
+      black 86%, transparent 88%, black 100%);
+    -webkit-mask-image: linear-gradient(to bottom,
+      black 0%, black 50%, transparent 52%,
+      black 56%, transparent 58%,
+      black 62%, transparent 64%,
+      black 68%, transparent 70%,
+      black 76%, transparent 78%,
+      black 86%, transparent 88%, black 100%);
   }
 
-  /* Animations */
-  @keyframes pulse-glow {
-    0%, 100% { filter: brightness(1); }
-    50% { filter: brightness(1.25); }
+  /* ════════════════════════════════════════════════════════════════
+     ASCII BORDERS — for terminal panels
+     ════════════════════════════════════════════════════════════════ */
+  .ascii-border {
+    position: relative;
+    padding: 1.5rem;
+    background: #050505;
+    color: var(--color-matrix);
+    font-family: var(--font-mono);
+    border: 1px solid var(--color-matrix);
   }
-  .pulse-glow { animation: pulse-glow 4s ease-in-out infinite; }
+  .ascii-border::before {
+    content: "+";
+    position: absolute;
+    top: -8px;
+    left: -1px;
+    background: #050505;
+    padding: 0 4px;
+    color: var(--color-matrix);
+  }
+  .ascii-border::after {
+    content: "+";
+    position: absolute;
+    top: -8px;
+    right: -1px;
+    background: #050505;
+    padding: 0 4px;
+    color: var(--color-matrix);
+  }
 
+  /* ════════════════════════════════════════════════════════════════
+     ANIMATIONS
+     ════════════════════════════════════════════════════════════════ */
   @keyframes blink {
     0%, 49% { opacity: 1; }
     50%, 100% { opacity: 0; }
   }
   .cursor-blink { animation: blink 1s steps(2) infinite; }
 
-  @keyframes hue-cycle {
-    0%, 100% { filter: hue-rotate(0deg); }
-    50% { filter: hue-rotate(20deg); }
+  @keyframes crt-flicker {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.96; }
   }
-  .hue-cycle { animation: hue-cycle 8s ease-in-out infinite; }
+  .crt-flicker { animation: crt-flicker 0.15s steps(2) infinite; }
+
+  @keyframes glitch {
+    0%, 100% { transform: translate(0, 0); filter: none; }
+    20% { transform: translate(-2px, 1px); filter: hue-rotate(90deg); }
+    40% { transform: translate(2px, -1px); }
+    60% { transform: translate(-1px, 2px); filter: hue-rotate(-30deg); }
+    80% { transform: translate(1px, -2px); }
+  }
+  .glitch-hover:hover { animation: glitch 0.3s steps(5) 1; }
+
+  @keyframes pulse-glow {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.25); }
+  }
+  .pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
+
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+  .marquee { animation: marquee 30s linear infinite; }
 
   /* Respect reduced motion */
   @media (prefers-reduced-motion: reduce) {
-    .pulse-glow,
-    .cursor-blink,
-    .hue-cycle {
+    .cursor-blink, .crt-flicker, .glitch-hover:hover, .pulse-glow, .marquee {
       animation: none;
     }
-    .scanlines::before {
-      display: none;
-    }
+    .scanlines::before { display: none; }
     * {
       animation-duration: 0.01ms !important;
       transition-duration: 0.01ms !important;
     }
   }
 
-  /* Panel base — used widely */
-  .panel {
-    background: var(--color-bg-panel);
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-  }
-  .panel-elevated {
-    background: var(--color-bg-elevated);
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
+  /* ════════════════════════════════════════════════════════════════
+     UTILITY: 0 border-radius everywhere by default (terminal/pixel feel)
+     Use rounded-sm/md/lg explicitly when needed.
+     ════════════════════════════════════════════════════════════════ */
+  .pixel-edge {
+    border-radius: 0 !important;
+    image-rendering: pixelated;
   }
 }

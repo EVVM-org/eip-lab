@@ -4,6 +4,7 @@ import How from "@/components/landing/How";
 import Compare from "@/components/landing/Compare";
 import DemoPicker from "@/components/landing/DemoPicker";
 import FAQ from "@/components/landing/FAQ";
+import Footer from "@/components/chrome/Footer";
 
 export default function Home() {
   return (
@@ -14,6 +15,7 @@ export default function Home() {
       <Compare />
       <DemoPicker />
       <FAQ />
+      <Footer />
     </>
   );
 }

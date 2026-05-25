@@ -11,17 +11,14 @@ interface FileTreeProps {
 }
 
 /**
- * Groups contracts under their parent folder (typically "contracts/").
- * Renders a vertical tree with file-type badges and a tiny docs-link
- * button when the contract has a canonical doc page.
+ * Groups contracts under their parent folder (typically `contracts/`).
+ * Selected file gets a pink accent + neon border, others muted.
  */
 export default function FileTree({
   contracts,
   selectedPath,
   onSelect,
 }: FileTreeProps) {
-  // Group by folder. Most demos have just contracts/ but the data structure
-  // supports deeper trees.
   const folders = new Map<string, LoadedContract[]>();
   for (const c of contracts) {
     const folder = c.path.includes("/")
@@ -39,7 +36,7 @@ export default function FileTree({
       {sortedFolders.map(([folder, files]) => (
         <div key={folder}>
           <div className="flex items-center gap-2 px-3 py-2 text-[10px] uppercase tracking-widest text-[var(--color-text-dim)]">
-            <span className="text-[var(--color-neon-purple)]">▾</span>
+            <span className="text-[var(--color-vp-purple)]">▾</span>
             <span>{folder}/</span>
             <span className="ml-auto">{files.length}</span>
           </div>
@@ -53,14 +50,14 @@ export default function FileTree({
                     onClick={() => onSelect(c.path)}
                     className={`group flex w-full items-center gap-2 border-l-2 px-3 py-2 text-left transition ${
                       isSelected
-                        ? "border-[var(--color-neon-pink)] bg-[rgba(255,0,110,0.08)] text-[var(--color-text)]"
-                        : "border-transparent text-[var(--color-text-muted)] hover:border-[var(--color-neon-purple)] hover:bg-[rgba(168,85,247,0.05)] hover:text-[var(--color-text)]"
+                        ? "border-[var(--color-vp-pink)] bg-[rgba(255,113,206,0.08)] text-[var(--color-text)]"
+                        : "border-transparent text-[var(--color-text-muted)] hover:border-[var(--color-vp-purple)] hover:bg-[rgba(185,103,255,0.05)] hover:text-[var(--color-text)]"
                     }`}
                   >
                     <span
                       className={`text-xs ${
                         isSelected
-                          ? "text-[var(--color-neon-pink)]"
+                          ? "text-[var(--color-vp-pink)]"
                           : "text-[var(--color-text-dim)]"
                       }`}
                     >
@@ -70,9 +67,7 @@ export default function FileTree({
                       {c.basename}
                     </span>
                     <ContractBadge type={c.type} />
-                    {c.docsLink && (
-                      <DocsLink href={c.docsLink} compact />
-                    )}
+                    {c.docsLink && <DocsLink href={c.docsLink} compact />}
                   </button>
                 </li>
               );

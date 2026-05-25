@@ -19,6 +19,22 @@ ERC-20 Transfers).
 - Static demo content from `content/demos/`
 - Zero backend, zero database, zero auth
 
+## Project-scoped design skill
+
+This repo's UI was iterated with the
+[ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)
+installed locally. To replicate the setup:
+
+```bash
+mkdir -p .claude/skills
+cd .claude/skills
+git clone https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git
+ln -s ui-ux-pro-max-skill/.claude/skills/ui-ux-pro-max ui-ux-pro-max
+```
+
+The skill clone and symlink are both git-ignored so the repo stays
+small; this README is the install record.
+
 ## Local development
 
 **Package manager: pnpm** (pinned via `packageManager` field; corepack

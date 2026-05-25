@@ -38,3 +38,7 @@ yarn-error.log*
 
 # Local skill settings
 .claude/settings.local.json
+
+# Cloned external skills (devs install separately — see README)
+.claude/skills/ui-ux-pro-max-skill/
+.claude/skills/ui-ux-pro-max

@@ -1,112 +1,78 @@
-import Button from "@/components/ui/Button";
-import Terminal from "@/components/ui/Terminal";
-import GlowText from "@/components/ui/GlowText";
+import WindowFrame from "@/components/ui/WindowFrame";
+import PixelButton from "@/components/ui/PixelButton";
+import GlitchText from "@/components/ui/GlitchText";
+import BootSequence from "@/components/ui/BootSequence";
 import { SITE } from "@/lib/constants";
 
 export default function Hero() {
   return (
-    <section className="relative overflow-hidden">
-      <div className="grid-bg absolute inset-0 opacity-60" />
-      <div className="absolute inset-x-0 top-0 h-[400px] sun-horizon opacity-30" />
+    <section className="relative px-4 pt-12 pb-24 md:pt-16">
+      <div className="mx-auto max-w-7xl">
+        <WindowFrame title="~/eiplab" accent="pink" glow>
+          <div className="grid gap-10 md:grid-cols-[1.2fr_1fr] md:items-center md:gap-12 px-2 py-4 md:py-8">
+            {/* Left — title + CTAs */}
+            <div>
+              <div className="mb-5 inline-flex items-center gap-2 border border-[var(--color-matrix)] bg-[rgba(51,255,65,0.06)] px-2.5 py-1 font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-widest text-[var(--color-matrix)] glow-matrix">
+                <span className="size-1.5 bg-[var(--color-matrix)] pulse-glow" />
+                online · v0.1 · live demo
+              </div>
 
-      <div className="relative mx-auto grid max-w-7xl gap-12 px-6 py-20 md:grid-cols-2 md:py-28">
-        <div className="flex flex-col justify-center">
-          <span className="mb-4 inline-flex w-fit items-center gap-2 rounded-sm border border-[var(--color-phosphor)] bg-[rgba(0,255,65,0.06)] px-3 py-1 text-xs uppercase tracking-widest text-[var(--color-phosphor)] glow-phosphor">
-            <span className="size-1.5 rounded-full bg-[var(--color-phosphor)] pulse-glow" />
-            online · v0.1 · demo
-          </span>
-
-          <h1 className="font-[family-name:var(--font-vt323)] text-5xl leading-[0.95] md:text-7xl">
-            <GlowText color="pink" display>
-              Prototype EIPs
-            </GlowText>
-            <br />
-            <span className="text-[var(--color-text)]">in afternoons,</span>
-            <br />
-            <GlowText color="cyan" display>
-              not weeks
-            </GlowText>
-            <span className="cursor-blink ml-2 text-[var(--color-phosphor)]">
-              _
-            </span>
-          </h1>
-
-          <p className="mt-6 max-w-md text-base leading-relaxed text-[var(--color-text-muted)]">
-            EIPLab is an AI-agent skill that turns{" "}
-            <a href={SITE.scaffoldEvvm} target="_blank" rel="noreferrer">
-              scaffold-evvm
-            </a>{" "}
-            into an EIP research bench. Modify Core contracts, mock the
-            heavy crypto, ship Solidity + per-contract justification. Tests,
-            deploys, and EIP drafts stay with your existing tooling.
-          </p>
-
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Button href="/#demos" variant="primary">
-              Launch demo →
-            </Button>
-            <Button href={SITE.skillRepo} external variant="ghost">
-              View skill repo ↗
-            </Button>
-          </div>
-        </div>
-
-        <div className="flex items-center">
-          <Terminal title="~/scaffold-evvm">
-            <div className="space-y-1">
-              <Prompt cmd="npx tsx new-experiment.ts 8250 'Keyed Nonces'" />
-              <Out>
-                Scaffolding EIP-8250 experiment (minimal skill)
-              </Out>
-              <Out className="text-[var(--color-text-dim)]">
-                Title: Keyed Nonces
+              <h1 className="text-4xl leading-[0.95] md:text-6xl">
+                <GlitchText color="pink" pixel className="text-[28px] md:text-[44px]">
+                  PROTOTYPE
+                </GlitchText>
                 <br />
-                Slug: keyed-nonces
+                <span className="font-[family-name:var(--font-vt323)] text-[44px] md:text-[88px]">
+                  any EIP
+                </span>
                 <br />
-                Output: experiments/eip-8250-keyed-nonces
-              </Out>
-              <Out className="text-[var(--color-phosphor)] glow-phosphor">
-                Done.
-              </Out>
-              <Out className="text-[var(--color-text-dim)]">Next:</Out>
-              <Out className="text-[var(--color-text-dim)]">
-                1. Fill manifest.json (hypothesis, shape, requires, mocks)
-                <br />
-                2. Phase 4: write Solidity + justification
-              </Out>
-              <div className="pt-2">
-                <Prompt cmd="" cursor />
+                <GlitchText color="cyan" className="text-[44px] md:text-[88px]">
+                  in an afternoon
+                </GlitchText>
+                <span className="cursor-blink ml-2 text-[var(--color-matrix)]">▊</span>
+              </h1>
+
+              <p className="mt-6 max-w-xl text-base leading-relaxed text-[var(--color-text)]">
+                Modify the core. Add services. Mock the heavy crypto. Get the{" "}
+                <code className="bg-[var(--color-bg-deep)] px-1 text-[var(--color-vp-cyan)]">.sol</code>
+                {" "}files and a per-contract justification document — for any
+                EIP you want to model.
+              </p>
+
+              <div className="mt-7 flex flex-wrap gap-3">
+                <PixelButton href="/#demos" variant="primary">
+                  Launch demo →
+                </PixelButton>
+                <PixelButton href={SITE.skillRepo} external variant="secondary">
+                  View skill ↗
+                </PixelButton>
               </div>
             </div>
-          </Terminal>
-        </div>
+
+            {/* Right — nested terminal window with boot sequence */}
+            <div>
+              <WindowFrame title="~/eiplab/boot" accent="cyan" controls={false}>
+                <BootSequence
+                  charDelay={14}
+                  lineDelay={130}
+                  lines={[
+                    "loading skill modules...",
+                    "→ references/core-anatomy ✓",
+                    "→ references/eip-mapping-strategy ✓",
+                    "→ references/signature-surface ✓",
+                    "→ references/dependency-and-mocking ✓",
+                    "scaffolding experiment eip-N-<slug>",
+                    "writing manifest.json",
+                    "writing justification.md",
+                    "compiling 12 contracts (modified core + services + mocks)",
+                    "✓ ready in 23.4s",
+                  ]}
+                />
+              </WindowFrame>
+            </div>
+          </div>
+        </WindowFrame>
       </div>
     </section>
-  );
-}
-
-function Prompt({ cmd, cursor = false }: { cmd: string; cursor?: boolean }) {
-  return (
-    <div className="flex items-baseline gap-2">
-      <span className="text-[var(--color-neon-pink)] glow-pink">$</span>
-      <span className="break-all text-[var(--color-text)]">{cmd}</span>
-      {cursor && (
-        <span className="cursor-blink text-[var(--color-phosphor)]">▊</span>
-      )}
-    </div>
-  );
-}
-
-function Out({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={`pl-4 text-[var(--color-text-muted)] ${className}`}>
-      {children}
-    </div>
   );
 }

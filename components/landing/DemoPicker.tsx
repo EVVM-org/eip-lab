@@ -1,8 +1,14 @@
 import Link from "next/link";
-import Panel from "@/components/ui/Panel";
+import WindowFrame from "@/components/ui/WindowFrame";
+import GlitchText from "@/components/ui/GlitchText";
 import Tag from "@/components/ui/Tag";
-import GlowText from "@/components/ui/GlowText";
 import { DEMOS } from "@/lib/constants";
+
+const ACCENT_TO_FRAME = {
+  "neon-pink": "pink" as const,
+  "neon-cyan": "cyan" as const,
+  "neon-purple": "purple" as const,
+};
 
 const ACCENT_TO_TAG = {
   "neon-pink": "pink" as const,
@@ -10,83 +16,87 @@ const ACCENT_TO_TAG = {
   "neon-purple": "purple" as const,
 };
 
-const ACCENT_TO_GLOW = {
-  "neon-pink": "pink" as const,
-  "neon-cyan": "cyan" as const,
-  "neon-purple": "purple" as const,
+const ACCENT_TO_TEXT = {
+  "neon-pink": "text-[var(--color-vp-pink)] glow-pink" as const,
+  "neon-cyan": "text-[var(--color-vp-cyan)] glow-cyan" as const,
+  "neon-purple": "text-[var(--color-vp-purple)] glow-purple" as const,
 };
 
 export default function DemoPicker() {
   return (
     <section
       id="demos"
-      className="relative border-y border-[var(--color-border)] bg-[rgba(26,10,46,0.4)] py-24"
+      className="relative py-20"
+      style={{
+        background: "rgba(13, 13, 21, 0.45)",
+        backdropFilter: "blur(2px)",
+      }}
     >
-      <div className="mx-auto max-w-7xl px-6">
-        <header className="mb-12 max-w-3xl">
-          <p className="mb-2 text-xs uppercase tracking-widest text-[var(--color-text-dim)]">
+      <div className="mx-auto max-w-7xl px-4">
+        <header className="mb-10 max-w-3xl">
+          <p className="mb-2 font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-widest text-[var(--color-text-dim)]">
             // demos
           </p>
-          <h2 className="text-4xl md:text-5xl">
-            <GlowText color="cyan" display>
-              Three EIPs, three shapes
-            </GlowText>
+          <h2 className="text-4xl leading-tight md:text-5xl">
+            <GlitchText color="cyan">Three EIPs, three shapes</GlitchText>
           </h2>
-          <p className="mt-4 text-[var(--color-text-muted)]">
-            One Core-modification, one new-service, one large new-service with
-            mock-heavy crypto. Each demo shows the actual `.sol` files the
-            skill produces, plus the per-contract justification.
+          <p className="mt-4 max-w-2xl text-[var(--color-text-muted)]">
+            One Core-modification, one new-service, one mock-heavy
+            shielded-pool service. Each demo shows the actual{" "}
+            <code className="bg-[var(--color-bg-deep)] px-1 text-[var(--color-vp-cyan)]">
+              .sol
+            </code>{" "}
+            files the skill produces, plus the per-contract justification.
           </p>
         </header>
 
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-3">
           {DEMOS.map((d) => {
-            const tagVariant = ACCENT_TO_TAG[d.accent];
-            const glow = ACCENT_TO_GLOW[d.accent];
+            const frame = ACCENT_TO_FRAME[d.accent];
+            const tag = ACCENT_TO_TAG[d.accent];
+            const text = ACCENT_TO_TEXT[d.accent];
             return (
               <Link
                 key={d.slug}
                 href={`/demo/${d.slug}` as never}
                 className="group block !text-inherit hover:!filter-none hover:!drop-shadow-none"
               >
-                <Panel
-                  glow={glow}
-                  className="flex h-full flex-col p-6 transition group-hover:translate-y-[-2px]"
+                <WindowFrame
+                  title={`eip-${d.eipNumber}`}
+                  accent={frame}
+                  glow
+                  controls
+                  className="transition-transform group-hover:translate-y-[-2px]"
                 >
-                  <div className="mb-4 flex items-center justify-between">
-                    <span className="font-[family-name:var(--font-vt323)] text-3xl tracking-wide text-[var(--color-text)]">
+                  <div className="mb-4 flex items-baseline justify-between gap-2">
+                    <span
+                      className={`font-[family-name:var(--font-vt323)] text-4xl ${text}`}
+                    >
                       EIP-{d.eipNumber}
                     </span>
-                    <div className="flex gap-2">
-                      <Tag variant={tagVariant}>shape {d.shape}</Tag>
+                    <div className="flex gap-1.5">
+                      <Tag variant={tag}>shape {d.shape}</Tag>
                       <Tag variant="neutral">{d.contractCount} files</Tag>
                     </div>
                   </div>
 
-                  <h3 className="mb-3 text-lg leading-tight">
+                  <h3 className="mb-3 text-base leading-tight font-semibold">
                     {d.shortTitle}
                   </h3>
-                  <p className="mb-6 flex-1 text-sm leading-relaxed text-[var(--color-text-muted)]">
+                  <p className="mb-6 min-h-[80px] text-sm leading-relaxed text-[var(--color-text-muted)]">
                     {d.summary}
                   </p>
 
-                  <div className="flex items-center justify-between border-t border-[var(--color-border)] pt-4">
-                    <span className="text-[10px] uppercase tracking-widest text-[var(--color-text-dim)]">
+                  <div
+                    className="flex items-center justify-between border-t pt-3 text-xs"
+                    style={{ borderColor: "rgba(255,255,255,0.08)" }}
+                  >
+                    <span className="font-[family-name:var(--font-mono)] uppercase tracking-widest text-[var(--color-text-dim)]">
                       {d.shapeLabel}
                     </span>
-                    <span
-                      className={`text-sm transition ${
-                        glow === "pink"
-                          ? "text-[var(--color-neon-pink)] group-hover:glow-pink"
-                          : glow === "cyan"
-                            ? "text-[var(--color-neon-cyan)] group-hover:glow-cyan"
-                            : "text-[var(--color-neon-purple)] group-hover:glow-purple"
-                      }`}
-                    >
-                      Open demo →
-                    </span>
+                    <span className={text}>open demo →</span>
                   </div>
-                </Panel>
+                </WindowFrame>
               </Link>
             );
           })}
