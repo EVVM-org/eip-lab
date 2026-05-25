@@ -1,0 +1,98 @@
+{
+  "$schema": "https://raw.githubusercontent.com/EVVM-org/EIPskillevvmsandbox/main/schema/manifest.schema.json",
+  "eip": {
+    "number": "8141",
+    "title": "Frame Transaction (router foundation)",
+    "url": "https://eips.ethereum.org/EIPS/eip-8141",
+    "status": "Draft"
+  },
+  "experiment": {
+    "slug": "frame-router",
+    "created": "2026-05-25",
+    "hypothesis": "EIP-8141's frame composition model (DEFAULT/VERIFY/SENDER modes, APPROVE opcode, atomic batching, dual signature schemes) can be modeled as a Solidity router on EVVM with new EVM opcodes mocked as functions/events. This is the foundation experiment — three sibling sub-experiments build on this router for canonical paymaster, default code, and P256 signatures respectively.",
+    "shape": "B"
+  },
+  "requires": [
+    {
+      "eip": "1559",
+      "satisfied_by": "stock-evm",
+      "notes": "Fee market — in every recent Anvil hardfork."
+    },
+    {
+      "eip": "2718",
+      "satisfied_by": "stock-evm",
+      "notes": "Typed tx envelope — this EIP adds type 0x06, but we don't model the tx-type byte in this Solidity-layer experiment."
+    },
+    {
+      "eip": "3607",
+      "satisfied_by": "stock-evm",
+      "notes": "Contract-cannot-be-sender — interestingly, EIP-8141 explicitly disables this for frame txs. Documented as a deviation, not modeled here."
+    },
+    {
+      "eip": "4844",
+      "satisfied_by": "stock-evm",
+      "notes": "Blob tx fee fields are passed through, not interpreted by FrameRouter."
+    },
+    {
+      "eip": "7623",
+      "satisfied_by": "stock-evm",
+      "notes": "Calldata cost change — affects the EIP's per-frame cost rationale but not the router's contract-layer behavior."
+    },
+    {
+      "eip": "7702",
+      "satisfied_by": "mock:DelegationRegistry",
+      "notes": "EOA-set-code delegation. Mocked as a small registry contract that FrameRouter consults before treating a sender as EOA-with-default-code."
+    }
+  ],
+  "mocks": [
+    {
+      "name": "APPROVE-as-function (FrameRouter.approve)",
+      "stubs": "APPROVE opcode (0xaa)",
+      "strategy": "mock",
+      "reason": "Cannot add EVM opcodes locally. VERIFY frames call FrameRouter.approve(scope) — the router updates transient storage (payer, senderApproved) and emits Approved(scope).",
+      "limitation": "Loses the opcode's frame-exit-on-success behavior. In the real EIP, APPROVE both terminates the frame AND updates approval state in one step; our mock requires the calling contract to return after invoking approve(). Reviewers should treat this as an integration test, not a faithful gas/atomicity model."
+    },
+    {
+      "name": "TXPARAM/FRAMEDATA*/FRAMEPARAM/SIGPARAM-as-functions",
+      "stubs": "TXPARAM (0xb0), FRAMEDATALOAD (0xb1), FRAMEDATACOPY (0xb2), FRAMEPARAM (0xb3), SIGPARAM (0xb4)",
+      "strategy": "mock",
+      "reason": "Cannot add EVM opcodes. Exposed as view functions on FrameRouter; VERIFY/SENDER frames call back into the router to read tx/frame/sig context.",
+      "limitation": "View-function gas cost replaces opcode-immediate cost (the real opcodes are 2-3 gas; our calls cost ~700 gas per access). The 'undefined param values cause exceptional halt' behavior is modeled as require() reverts."
+    },
+    {
+      "name": "MockExpiryVerifier",
+      "stubs": "Canonical expiry verifier system contract at 0x...8141",
+      "strategy": "simulate",
+      "reason": "EIP §'Expiry Verifier Frame' specifies a 26-byte runtime bytecode that reverts unless block.timestamp <= expiry_timestamp. We provide a Solidity equivalent that's bit-equivalent in behavior; for production fidelity, a deploy script would vm.etch the canonical bytes at 0x...8141.",
+      "limitation": "Deployed at a regular address in this experiment, not the canonical address. The behavior is bit-equivalent (same revert/stop semantics)."
+    },
+    {
+      "name": "MockP256Verifier",
+      "stubs": "P256 signature scheme (EIP §'Signature Schemes')",
+      "strategy": "vendor",
+      "reason": "DaimoSoftware/p256-verifier ships a battle-tested pure-Solidity P256VERIFY implementation. We wrap it behind FrameRouter's IPSignatureVerifier interface. When EIP-7951 (secp256r1 precompile) ships, swap the vendor for the precompile call.",
+      "limitation": "Pure-Solidity P256 costs ~340k gas per verify, vs. ~3-7k for the precompile. The functional behavior is correct; the gas profile is not. Adversarial scenarios about gas exhaustion would not be representative."
+    }
+  ],
+  "contracts": [
+    {
+      "path": "contracts/FrameRouter.sol",
+      "type": "new-service",
+      "why": "Frame transactions are a service-level abstraction (the validate-pay-execute pipeline is composable in any contract that processes the frame array). Building this as a Shape B new service — rather than modifying Core — keeps EVVM's existing nonce/balance machinery untouched and lets FrameRouter compose with the existing dual-signature pattern (the per-frame VERIFY pattern is conceptually identical to EVVM's action+pay split).",
+      "docsLink": "https://www.evvm.info/docs/HowToMakeAEVVMService"
+    },
+    {
+      "path": "contracts/MockExpiryVerifier.sol",
+      "type": "mock-contract",
+      "why": "The canonical expiry verifier in EIP §'Expiry Verifier Frame' is a tiny system contract at 0x...8141 with a fixed bytecode. We model it as a Solidity contract with bit-equivalent behavior so the FrameRouter's expiry handling can be exercised end-to-end without a vm.etch dance during local testing.",
+      "docsLink": null
+    },
+    {
+      "path": "contracts/MockP256Verifier.sol",
+      "type": "mock-contract",
+      "why": "Pluggable P256 verifier. Wraps Daimo's audited Solidity P256VERIFY so FrameRouter can validate P256 signatures (scheme 0x1) without modifying the canonical EVM. Drop-in replacement when EIP-7951's precompile ships.",
+      "docsLink": null
+    }
+  ],
+  "justification": "justification.md"
+}
