@@ -1,32 +1,42 @@
-/**
- * Stub. Replaced in M2 with the real 3-pane file explorer.
- */
-import Link from "next/link";
-import Terminal from "@/components/ui/Terminal";
+import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import DemoShell from "@/components/demo/DemoShell";
+import DemoHeader from "@/components/demo/DemoHeader";
+import { getAllDemoSlugs, getDemoBySlug } from "@/lib/demos";
+import { SITE } from "@/lib/constants";
 
 interface PageProps {
   params: Promise<{ eip: string }>;
 }
 
-export default async function DemoStub({ params }: PageProps) {
+export async function generateStaticParams() {
+  return getAllDemoSlugs().map((eip) => ({ eip }));
+}
+
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { eip } = await params;
+  const demo = await getDemoBySlug(eip);
+  if (!demo) return { title: `${SITE.name} — demo not found` };
+  return {
+    title: `EIP-${demo.eip.number} — ${demo.eip.title}`,
+    description: demo.experiment.hypothesis,
+  };
+}
+
+export default async function DemoPage({ params }: PageProps) {
+  const { eip } = await params;
+  const demo = await getDemoBySlug(eip);
+
+  if (!demo) {
+    notFound();
+  }
+
   return (
-    <section className="mx-auto max-w-3xl px-6 py-24">
-      <Terminal title={`~/demos/${eip}`}>
-        <div className="space-y-2">
-          <div className="text-[var(--color-neon-pink)]">$ open {eip}</div>
-          <div className="pl-4 text-[var(--color-text-muted)]">
-            Demo viewer scaffolding in progress (M2).
-            <br />
-            File tree, code viewer, and justification panel land in the next push.
-          </div>
-          <div className="pt-3">
-            <Link href="/#demos" className="text-[var(--color-neon-cyan)]">
-              ← back to demos
-            </Link>
-          </div>
-        </div>
-      </Terminal>
-    </section>
+    <>
+      <DemoHeader demo={demo} />
+      <DemoShell demo={demo} />
+    </>
   );
 }

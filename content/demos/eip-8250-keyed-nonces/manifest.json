@@ -1,0 +1,60 @@
+{
+  "$schema": "https://raw.githubusercontent.com/EVVM-org/EIPskillevvmsandbox/main/schema/manifest.schema.json",
+  "eip": {
+    "number": "8250",
+    "title": "Keyed Nonces for Frame Transactions",
+    "url": "https://eips.ethereum.org/EIPS/eip-8250",
+    "status": "Draft"
+  },
+  "experiment": {
+    "slug": "keyed-nonces",
+    "created": "2026-05-25",
+    "hypothesis": "EVVM's async nonce track can be extended into a (key, seq) keyed-nonce model with no breaking change to existing services. Replay-independence across non-zero keys holds. key=0 preserves legacy behavior. KEYED_NONCE_FIRST_USE_GAS is modeled as a principal-token surcharge inside validateAndConsumeKeyedNonce.",
+    "shape": "A"
+  },
+  "requires": [
+    {
+      "eip": "8141",
+      "satisfied_by": "experiment:eip-8141-frame-router",
+      "notes": "Path (a) — reuses the frame router via env var FRAME_ROUTER_ADDRESS at integration time. The keyed-nonce logic itself does not depend on frame-tx encoding."
+    }
+  ],
+  "mocks": [
+    {
+      "name": "NonceManager",
+      "stubs": "Canonical NONCE_MANAGER system contract at TBD address",
+      "strategy": "simulate",
+      "reason": "EIP-8250 §5 says the contract is deployed at a fork-managed TBD address with revert(0,0) code. On scaffold-evvm we deploy normally and have Core hold an admin pointer; the canonical bytecode would be vm.etch'd at production time.",
+      "limitation": "Fork-activation install semantics not modeled. The reverting fallback bytecode is omitted since we never call NonceManager directly from EOA-side."
+    },
+    {
+      "name": "Core.txParam",
+      "stubs": "TXPARAM(0x0B) and TXPARAM(0x0C) opcodes",
+      "strategy": "mock",
+      "reason": "Cannot add EVM opcodes locally. Exposed as view functions on the modified Core so services can read keyedNonce/legacyNonce in the same single-call shape they'd use post-fork.",
+      "limitation": "Loses opcode-immediate gas cost (2 gas → SLOAD warm cost). Function-call dispatch adds a JUMPI and a CALLDATALOAD that the real opcode wouldn't need."
+    },
+    {
+      "name": "KeyedNonceFirstUseSurcharge",
+      "stubs": "KEYED_NONCE_FIRST_USE_GAS = 20000 first-use exceptional halt",
+      "strategy": "mock",
+      "reason": "Modeled as a principal-token charge returned from validateAndConsumeKeyedNonce. Service callers are expected to settle the surcharge via Core.pay() before continuing. Keeps the atomicity claim 'either approval+surcharge commit, or both revert' testable.",
+      "limitation": "The surcharge is in principal-token units, not EVM gas. Out-of-gas atomicity (EIP-8250 §Specification step 3 — halt before any approval effects) is approximated by the require check, not exact gas accounting."
+    }
+  ],
+  "contracts": [
+    {
+      "path": "contracts/Core.sol",
+      "type": "core-modification",
+      "why": "Nonce machinery lives in Core. EIP-8250 requires adding a parallel (key, seq) replay-protection track without breaking the existing single-nonce path. The async nonce track in EVVM's Core already implements 1:1 the same conceptual model (per-user per-slot replay protection) with the sequence collapsed into the slot — this experiment just splits sequence back out and adds the system-contract dispatch surface.",
+      "docsLink": "https://www.evvm.info/docs/category/coresol"
+    },
+    {
+      "path": "contracts/NonceManager.sol",
+      "type": "new-system-contract",
+      "why": "EIP-8250 §5 specifies NONCE_MANAGER as a fork-deployed system contract holding the keyed-nonce state. We model it as a regular Solidity contract with an immutable Core pointer (only Core can mutate). Storage layout matches the EIP's `slot(sender, nonce_key) = keccak256(left_pad_32(sender) || uint256_to_bytes32(nonce_key))` formula via a nested mapping that Solidity lays out identically.",
+      "docsLink": null
+    }
+  ],
+  "justification": "justification.md"
+}
