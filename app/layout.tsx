@@ -25,11 +25,13 @@ export const metadata: Metadata = {
     description: SITE.tagline,
     type: "website",
     url: SITE.url,
+    images: [{ url: "/og.svg", width: 1200, height: 630, alt: SITE.name }],
   },
   twitter: {
     card: "summary_large_image",
     title: SITE.name,
     description: SITE.tagline,
+    images: ["/og.svg"],
   },
   icons: {
     icon: "/favicon.svg",

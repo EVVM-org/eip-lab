@@ -21,24 +21,63 @@ ERC-20 Transfers).
 
 ## Local development
 
+**Package manager: pnpm** (pinned via `packageManager` field; corepack
+auto-prepares the version). Both `pnpm` and `npm` honor the 3-day
+`min-release-age` / `minimum-release-age` policy in `.npmrc`.
+
 ```bash
-npm install        # respects the 3-day min-release-age policy
-npm run dev        # http://localhost:3000
-npm run build      # production build
-npm run start      # serve the build
-npm run type-check # strict tsc
+# First time on a new machine
+corepack enable          # one-time; lets corepack manage pnpm
+# Subsequent
+pnpm install             # respects the 3-day min-release-age policy
+pnpm dev                 # http://localhost:3000
+pnpm build               # production build
+pnpm start               # serve the build
+pnpm type-check          # strict tsc
 ```
+
+If pnpm refuses to install a package because it's too fresh
+(supply-chain protection working as intended), either wait until the
+package ages past 3 days, or pin to a slightly older version in
+`package.json`.
 
 ## Deploy to Vercel
 
 Three steps, no config:
 
-1. Push this repo to GitHub
-2. Go to [vercel.com/new](https://vercel.com/new) and import the repo
-3. Click **Deploy**
+1. **Push this repo to GitHub** (or your preferred git host that
+   Vercel can read).
+2. **Import to Vercel**: go to [vercel.com/new](https://vercel.com/new),
+   pick the repo. Next.js 15 is auto-detected; framework preset,
+   build command (`next build`), and output directory are all
+   pre-filled.
+3. **Click Deploy**.
 
-Next.js is auto-detected. No environment variables required. The site
-is fully static and CDN-served from Vercel's edge.
+No environment variables required. No `vercel.json`. No serverless
+functions — the entire site builds to static HTML + assets and is
+served from Vercel's CDN edge.
+
+**Local preview before deploy:**
+
+```bash
+npm install
+npm run build
+npm run start   # http://localhost:3000
+npm run type-check  # strict TypeScript pass
+```
+
+**What ships when you build:**
+
+- Landing page (statically rendered)
+- 3 demo routes (one per EIP, pre-rendered via `generateStaticParams`)
+- All Solidity files highlighted at build time via Shiki (no client-
+  side highlighter weight)
+- All justification markdown rendered server-side
+- Custom OG image (`/og.svg`) for social cards
+
+**Custom domain:** set in Vercel's project settings → Domains.
+EIPLab assumes `eiplab.evvm.org` in `lib/constants.ts`; update the
+`SITE.url` field if you deploy elsewhere.
 
 ## Project layout
 
