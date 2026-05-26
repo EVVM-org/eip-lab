@@ -1,9 +1,12 @@
 import Tag from "@/components/ui/Tag";
 import GlitchText from "@/components/ui/GlitchText";
+import PixelButton from "@/components/ui/PixelButton";
 import { DOCS } from "@/lib/constants";
 import type { LoadedDemo } from "@/lib/demos";
 
 export default function DemoHeader({ demo }: { demo: LoadedDemo }) {
+  const zipPath = `/downloads/${demo.slug}.zip`;
+
   return (
     <header className="mx-auto max-w-7xl px-4 pt-8 pb-4">
       <div className="mb-3 flex items-center gap-2 font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-widest text-[var(--color-text-dim)]">
@@ -14,7 +17,7 @@ export default function DemoHeader({ demo }: { demo: LoadedDemo }) {
         <span>eip-{demo.eip.number}</span>
       </div>
 
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="flex items-baseline gap-3">
             <GlitchText color="pink" className="text-5xl">
@@ -27,14 +30,20 @@ export default function DemoHeader({ demo }: { demo: LoadedDemo }) {
             {demo.eip.title}
           </h1>
         </div>
-        <a
-          href={demo.eip.url}
-          target="_blank"
-          rel="noreferrer"
-          className="font-[family-name:var(--font-mono)] text-xs text-[var(--color-text-muted)] hover:text-[var(--color-vp-cyan)]"
-        >
-          eips.ethereum.org ↗
-        </a>
+
+        <div className="flex flex-col items-end gap-2">
+          <PixelButton href={zipPath} variant="phosphor" download>
+            ↓ Download EVVM Package
+          </PixelButton>
+          <a
+            href={demo.eip.url}
+            target="_blank"
+            rel="noreferrer"
+            className="font-[family-name:var(--font-mono)] text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-vp-cyan)]"
+          >
+            eips.ethereum.org ↗
+          </a>
+        </div>
       </div>
 
       <p className="mt-4 max-w-3xl text-sm leading-relaxed text-[var(--color-text-muted)]">
@@ -43,8 +52,9 @@ export default function DemoHeader({ demo }: { demo: LoadedDemo }) {
       </p>
 
       <p className="mt-3 font-[family-name:var(--font-mono)] text-[11px] text-[var(--color-text-dim)]">
-        <span className="text-[var(--color-vp-purple)]">› runtime</span>{" "}
-        drop these into{" "}
+        <span className="text-[var(--color-vp-purple)]">› package</span>{" "}
+        zip includes contracts + justification + a NEXT_STEPS.md with
+        EVVM docs and local-testing instructions via{" "}
         <a
           href={DOCS.scaffoldEvvm}
           target="_blank"
@@ -52,8 +62,7 @@ export default function DemoHeader({ demo }: { demo: LoadedDemo }) {
           className="text-[var(--color-vp-cyan)]"
         >
           scaffold-evvm ↗
-        </a>{" "}
-        to run them
+        </a>
       </p>
     </header>
   );

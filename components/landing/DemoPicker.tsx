@@ -42,11 +42,8 @@ export default function DemoPicker() {
           </h2>
           <p className="mt-4 max-w-2xl text-[var(--color-text-muted)]">
             One Core-modification, one new-service, one mock-heavy
-            shielded-pool service. Each demo shows the actual{" "}
-            <code className="bg-[var(--color-bg-deep)] px-1 text-[var(--color-vp-cyan)]">
-              .sol
-            </code>{" "}
-            files the skill produces, plus the per-contract justification.
+            shielded-pool service. Open the demo to explore the contracts,
+            or download the EVVM package directly.
           </p>
         </header>
 
@@ -56,48 +53,60 @@ export default function DemoPicker() {
             const tag = ACCENT_TO_TAG[d.accent];
             const text = ACCENT_TO_TEXT[d.accent];
             return (
-              <Link
+              <WindowFrame
                 key={d.slug}
-                href={`/demo/${d.slug}` as never}
-                className="group block !text-inherit hover:!filter-none hover:!drop-shadow-none"
+                title={`eip-${d.eipNumber}`}
+                accent={frame}
+                glow
+                controls
               >
-                <WindowFrame
-                  title={`eip-${d.eipNumber}`}
-                  accent={frame}
-                  glow
-                  controls
-                  className="transition-transform group-hover:translate-y-[-2px]"
-                >
-                  <div className="mb-4 flex items-baseline justify-between gap-2">
-                    <span
-                      className={`font-[family-name:var(--font-vt323)] text-4xl ${text}`}
-                    >
-                      EIP-{d.eipNumber}
-                    </span>
-                    <div className="flex gap-1.5">
-                      <Tag variant={tag}>shape {d.shape}</Tag>
-                      <Tag variant="neutral">{d.contractCount} files</Tag>
+                <div className="flex flex-col">
+                  {/* Whole-card click target = open the demo */}
+                  <Link
+                    href={`/demo/${d.slug}` as never}
+                    className="-mx-1 -mt-1 mb-3 block !text-inherit hover:!filter-none hover:!drop-shadow-none"
+                  >
+                    <div className="mb-3 flex items-baseline justify-between gap-2">
+                      <span
+                        className={`font-[family-name:var(--font-vt323)] text-4xl ${text}`}
+                      >
+                        EIP-{d.eipNumber}
+                      </span>
+                      <div className="flex gap-1.5">
+                        <Tag variant={tag}>shape {d.shape}</Tag>
+                        <Tag variant="neutral">{d.contractCount} files</Tag>
+                      </div>
                     </div>
-                  </div>
 
-                  <h3 className="mb-3 text-base leading-tight font-semibold">
-                    {d.shortTitle}
-                  </h3>
-                  <p className="mb-6 min-h-[80px] text-sm leading-relaxed text-[var(--color-text-muted)]">
-                    {d.summary}
-                  </p>
+                    <h3 className="mb-2 text-base leading-tight font-semibold">
+                      {d.shortTitle}
+                    </h3>
+                    <p className="min-h-[80px] text-sm leading-relaxed text-[var(--color-text-muted)]">
+                      {d.summary}
+                    </p>
+                  </Link>
 
+                  {/* Action row — separate links, no nested anchors */}
                   <div
-                    className="flex items-center justify-between border-t pt-3 text-xs"
+                    className="flex items-center justify-between gap-3 border-t pt-3 text-xs"
                     style={{ borderColor: "rgba(255,255,255,0.08)" }}
                   >
-                    <span className="font-[family-name:var(--font-mono)] uppercase tracking-widest text-[var(--color-text-dim)]">
-                      {d.shapeLabel}
-                    </span>
-                    <span className={text}>open demo →</span>
+                    <a
+                      href={`/downloads/${d.slug}.zip`}
+                      download
+                      className="font-[family-name:var(--font-mono)] font-bold uppercase tracking-widest text-[var(--color-matrix)] glow-matrix hover:!filter-none"
+                    >
+                      ↓ .zip
+                    </a>
+                    <Link
+                      href={`/demo/${d.slug}` as never}
+                      className={`font-[family-name:var(--font-mono)] uppercase tracking-widest ${text}`}
+                    >
+                      open demo →
+                    </Link>
                   </div>
-                </WindowFrame>
-              </Link>
+                </div>
+              </WindowFrame>
             );
           })}
         </div>

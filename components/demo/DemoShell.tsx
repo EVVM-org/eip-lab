@@ -60,9 +60,9 @@ export default function DemoShell({ demo }: DemoShellProps) {
       </div>
 
       {/* 3-pane grid (desktop) / tabbed view (mobile)
-          Compact height: 600px so the layout doesn't dominate the
-          viewport. Each pane scrolls independently inside its window. */}
-      <div className="grid h-[600px] gap-3 md:grid-cols-[230px_1.1fr_1fr]">
+          Compact 450px height so the contract viewer doesn't dominate.
+          Each pane scrolls independently inside its window. */}
+      <div className="grid h-[450px] gap-3 md:grid-cols-[230px_1.1fr_1fr]">
         <div className={`${mobileTab === "files" ? "block" : "hidden"} md:block min-w-0`}>
           <WindowFrame
             title={`files · ${demo.contracts.length}`}

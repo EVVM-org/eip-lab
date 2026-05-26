@@ -11,6 +11,8 @@ interface PixelButtonProps {
   className?: string;
   /** Renders as a smaller chip-sized button (lower padding + smaller text). */
   size?: "md" | "sm";
+  /** If set, adds a `download` attribute so the browser saves the file. */
+  download?: boolean | string;
 }
 
 const VARIANT_TEXT: Record<Variant, string> = {
@@ -49,6 +51,7 @@ export default function PixelButton({
   children,
   variant = "primary",
   size = "md",
+  download,
   className = "",
 }: PixelButtonProps) {
   const base =
@@ -58,9 +61,16 @@ export default function PixelButton({
     ghost ? "" : VARIANT_BG[variant]
   } ${VARIANT_TEXT[variant]} ${VARIANT_GLOW[variant]} ${className}`;
 
-  if (external) {
+  // For external links AND for download links, render a plain <a> so the
+  // browser can fetch the asset directly (Next.js <Link> is router-only).
+  if (external || download !== undefined) {
     return (
-      <a href={href} target="_blank" rel="noreferrer" className={classes}>
+      <a
+        href={href}
+        {...(external ? { target: "_blank", rel: "noreferrer" } : {})}
+        {...(download !== undefined ? { download } : {})}
+        className={classes}
+      >
         {children}
       </a>
     );

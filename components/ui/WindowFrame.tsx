@@ -46,13 +46,13 @@ export default function WindowFrame({
 }: WindowFrameProps) {
   return (
     <div
-      className={`win98-window pixel-edge p-1 ${
+      className={`win98-window pixel-edge p-1 flex flex-col ${
         glow ? ACCENT_GLOW[accent] : ""
       } ${className}`}
     >
-      {/* Title bar */}
+      {/* Title bar — fixed-size; doesn't shrink */}
       <div
-        className="flex items-center justify-between px-2 py-1"
+        className="flex shrink-0 items-center justify-between px-2 py-1"
         style={{ background: ACCENT_GRADIENT[accent] }}
       >
         <span
@@ -70,11 +70,13 @@ export default function WindowFrame({
         )}
       </div>
 
-      {/* Body */}
+      {/* Body — takes remaining space, contains overflow so children
+          can scroll independently. min-h-0 is required for flex
+          children to shrink past content size. */}
       <div
         className={`bg-[var(--color-bg-card)] ${
           flush ? "" : "p-5"
-        } text-[var(--color-text)]`}
+        } text-[var(--color-text)] flex-1 min-h-0 overflow-hidden`}
         style={{
           /* Inset bevel for the body (looks "recessed" inside the frame) */
           boxShadow:

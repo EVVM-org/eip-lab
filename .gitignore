@@ -42,3 +42,7 @@ yarn-error.log*
 # Cloned external skills (devs install separately — see README)
 .claude/skills/ui-ux-pro-max-skill/
 .claude/skills/ui-ux-pro-max
+
+# Generated EVVM packages (built via scripts/build-packages.mjs)
+public/downloads/
+.build-staging/
