@@ -1,16 +1,17 @@
 /**
- * Static configuration for the EIPLab marketing site.
- * No env vars; this is the source of truth for site-wide content.
+ * Static configuration for the EVVM EIP Lab site.
+ * No secrets here. This is the source of truth for site-wide content.
  */
 
 export const SITE = {
-  name: "EIPLab",
-  tagline: "Prototype EIPs on EVVM in afternoons, not weeks",
+  name: "EVVM EIP Lab",
+  shortName: "EIP Lab",
+  tagline: "The lab for testing new EIPs on EVVM",
   description:
-    "AI-agent skill that turns scaffold-evvm into an EIP research bench. Produces Solidity + per-contract justification for any EIP you want to prototype.",
+    "EVVM EIP Lab turns any EIP into documented Solidity for the EVVM stack. Bring an EIP and your own AI provider key; the Lab reads it, agrees with you on what it is, maps it onto the EVVM core, and hands back commented contracts. EVVM is where protocol-level experiments get tested.",
   url: "https://eiplab.evvm.org",
-  github: "https://github.com/EVVM-org/EIPlabbyevvmfrontend",
-  skillRepo: "https://github.com/EVVM-org/EIPskillevvmsandbox",
+  github: "https://github.com/0xOucan/eiplabv1",
+  evvmOrg: "https://github.com/EVVM-org",
   scaffoldEvvm: "https://github.com/EVVM-org/scaffold-evvm",
 } as const;
 
@@ -26,6 +27,46 @@ export const DOCS = {
   eipIndex: "https://eips.ethereum.org/all",
   evvmInfo: "https://www.evvm.info",
 } as const;
+
+/**
+ * AI providers the Lab can use. Users bring their own API key per
+ * provider. Venice is first because it's OpenAI-compatible and the
+ * launch partner. The key never leaves the request path: browser →
+ * our route → provider → discarded.
+ */
+export interface ProviderConfig {
+  id: string;
+  label: string;
+  /** Provider base URL (server-side proxy target). */
+  baseUrl: string;
+  /** Where users get an API key. */
+  keyUrl: string;
+  /** Docs for the provider's API. */
+  docsUrl: string;
+  /** Fallback model list if the live /models call fails. */
+  fallbackModels: string[];
+  /** Whether this provider is wired up yet. */
+  enabled: boolean;
+}
+
+export const PROVIDERS: readonly ProviderConfig[] = [
+  {
+    id: "venice",
+    label: "Venice AI",
+    baseUrl: "https://api.venice.ai/api/v1",
+    keyUrl: "https://venice.ai/settings/api",
+    docsUrl: "https://docs.venice.ai/api-reference/api-spec",
+    fallbackModels: [
+      "venice-uncensored",
+      "llama-3.3-70b",
+      "qwen-2.5-qwq-32b",
+      "deepseek-r1-671b",
+    ],
+    enabled: true,
+  },
+] as const;
+
+export const DEFAULT_PROVIDER_ID = "venice";
 
 export type DemoAccent = "neon-pink" | "neon-cyan" | "neon-purple";
 export type DemoShape = "A" | "B" | "C";
@@ -64,7 +105,7 @@ export const DEMOS: readonly DemoMeta[] = [
     shapeLabel: "New Service",
     contractCount: 3,
     summary:
-      "Frame transactions decompose validate-pay-execute across modes. This sub-experiment models the router foundation that future frame work builds on.",
+      "Frame transactions decompose validate-pay-execute across modes. This experiment models the router foundation that future frame work builds on.",
     accent: "neon-cyan",
   },
   {

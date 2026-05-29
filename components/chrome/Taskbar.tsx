@@ -2,26 +2,38 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { SITE } from "@/lib/constants";
 
 /**
- * Terminal-style bottom status bar. Win98-chunky chrome on the OUTSIDE
- * (raised bevel, gray base), terminal/HUD content on the INSIDE.
- *
- * NOT a Windows-style Start menu — this is closer to a tmux status
- * bar or a vintage Unix HUD.
+ * Bottom bar styled as a row of MINIMIZED WINDOWS (terminal-flavored,
+ * not a Windows Start menu). Each nav target is a minimized-window
+ * chip: a little title-bar-colored tab you can "restore" by clicking.
+ * A prominent Launch chip sits on the right with the system clock.
  */
+
+interface MiniWin {
+  href: string;
+  title: string;
+  accent: string; // css var
+  external?: boolean;
+}
+
+const WINDOWS: MiniWin[] = [
+  { href: "/", title: "~/eiplab", accent: "var(--color-vp-pink)" },
+  { href: "/#how", title: "how_it_works", accent: "var(--color-vp-purple)" },
+  { href: "/#demos", title: "examples", accent: "var(--color-vp-cyan)" },
+  { href: "/#faq", title: "faq.txt", accent: "var(--color-vp-mint)" },
+];
+
 export default function Taskbar() {
-  const [now, setNow] = useState<string>("");
+  const [now, setNow] = useState("");
 
   useEffect(() => {
-    function fmt() {
+    const fmt = () => {
       const d = new Date();
-      const hh = d.getHours().toString().padStart(2, "0");
-      const mm = d.getMinutes().toString().padStart(2, "0");
-      const ss = d.getSeconds().toString().padStart(2, "0");
-      return `${hh}:${mm}:${ss}`;
-    }
+      return [d.getHours(), d.getMinutes(), d.getSeconds()]
+        .map((n) => n.toString().padStart(2, "0"))
+        .join(":");
+    };
     setNow(fmt());
     const id = setInterval(() => setNow(fmt()), 1000);
     return () => clearInterval(id);
@@ -29,65 +41,59 @@ export default function Taskbar() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 bevel-raised">
-      <div className="mx-auto flex max-w-[1600px] items-stretch gap-2 px-2 py-1">
+      <div className="mx-auto flex max-w-[1600px] items-stretch gap-1.5 px-2 py-1.5">
+        {/* Minimized-window chips */}
+        <div className="flex flex-1 items-stretch gap-1.5 overflow-x-auto">
+          {WINDOWS.map((w) => (
+            <MiniWindow key={w.title} win={w} />
+          ))}
+        </div>
 
-        {/* Brand chip — left */}
+        {/* Launch chip — the highlighted action */}
         <Link
-          href="/"
-          className="bevel-active flex items-center gap-2 px-3 py-1 font-[family-name:var(--font-press-start)] text-[10px] uppercase text-[var(--color-win-black)] hover:bevel-raised hover:!filter-none hover:!drop-shadow-none"
+          href="/lab"
+          className="pixel-edge flex shrink-0 items-center gap-2 border-2 border-[var(--color-matrix)] bg-[#07010f] px-3 py-1 font-[family-name:var(--font-mono)] text-[11px] font-bold uppercase tracking-widest text-[var(--color-matrix)] glow-matrix hover:bg-[rgba(51,255,65,0.14)] hover:!filter-none"
         >
-          <span className="size-2 bg-[var(--color-vp-pink)]" />
-          eiplab
+          <span className="size-1.5 bg-[var(--color-matrix)] pulse-glow" />
+          launch lab
         </Link>
 
-        {/* Nav links — middle, hidden on mobile */}
-        <nav className="hidden flex-1 items-center gap-1 md:flex">
-          <TaskbarLink href="/#how" label="how_it_works" />
-          <TaskbarLink href="/#demos" label="demos" />
-          <TaskbarLink href="/#faq" label="faq" />
-          <TaskbarLink
-            href={SITE.skillRepo}
-            label="skill ↗"
-            external
-          />
-        </nav>
-
-        {/* Status segment — right */}
-        <div className="ml-auto flex items-center gap-2">
-          <div className="bevel-sunken flex items-center gap-1.5 px-2 py-1 text-[10px] uppercase text-[var(--color-win-black)]">
-            <span className="size-1.5 bg-[var(--color-matrix)] pulse-glow" />
-            <span className="font-[family-name:var(--font-mono)]">online</span>
-          </div>
-          <div className="bevel-sunken flex items-center px-2 py-1 font-[family-name:var(--font-mono)] text-[11px] text-[var(--color-win-black)] tabular-nums">
-            {now || "--:--:--"}
-          </div>
+        {/* Clock tray */}
+        <div className="bevel-sunken flex shrink-0 items-center px-2.5 py-1 font-[family-name:var(--font-mono)] text-[11px] text-[var(--color-win-black)] tabular-nums">
+          {now || "--:--:--"}
         </div>
       </div>
     </div>
   );
 }
 
-function TaskbarLink({
-  href,
-  label,
-  external,
-}: {
-  href: string;
-  label: string;
-  external?: boolean;
-}) {
-  const className =
-    "bevel-raised hover:bevel-active px-3 py-1 font-[family-name:var(--font-mono)] text-[11px] text-[var(--color-win-black)] hover:!filter-none hover:!drop-shadow-none";
-  if (external) {
+function MiniWindow({ win }: { win: MiniWin }) {
+  const inner = (
+    <span className="flex items-center gap-2">
+      {/* tiny title-bar swatch — the "minimized window" cue */}
+      <span
+        className="h-3 w-4 shrink-0 border border-black/40"
+        style={{ background: win.accent }}
+      />
+      <span className="truncate font-[family-name:var(--font-mono)] text-[11px] text-[var(--color-win-black)]">
+        {win.title}
+      </span>
+    </span>
+  );
+
+  const cls =
+    "bevel-raised hover:bevel-active flex min-w-[120px] max-w-[180px] items-center px-2 py-1 hover:!filter-none hover:!drop-shadow-none";
+
+  if (win.external) {
     return (
-      <a href={href} target="_blank" rel="noreferrer" className={className}>
-        {label}
+      <a href={win.href} target="_blank" rel="noreferrer" className={cls}>
+        {inner}
       </a>
     );
   }
   return (
-    <Link href={href} className={className}>
-      {label}
+    <Link href={win.href} className={cls}>
+      {inner}
     </Link>
   );
 }

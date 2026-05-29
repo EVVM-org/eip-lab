@@ -2,7 +2,6 @@ import WindowFrame from "@/components/ui/WindowFrame";
 import PixelButton from "@/components/ui/PixelButton";
 import GlitchText from "@/components/ui/GlitchText";
 import BootSequence from "@/components/ui/BootSequence";
-import { SITE } from "@/lib/constants";
 
 export default function Hero() {
   return (
@@ -14,58 +13,60 @@ export default function Hero() {
             <div>
               <div className="mb-5 inline-flex items-center gap-2 border border-[var(--color-matrix)] bg-[rgba(51,255,65,0.06)] px-2.5 py-1 font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-widest text-[var(--color-matrix)] glow-matrix">
                 <span className="size-1.5 bg-[var(--color-matrix)] pulse-glow" />
-                online · v0.1 · live demo
+                EVVM · protocol-level lab · live
               </div>
 
               <h1 className="text-4xl leading-[0.95] md:text-6xl">
-                <GlitchText color="pink" pixel className="text-[28px] md:text-[44px]">
-                  PROTOTYPE
+                <GlitchText color="pink" pixel className="text-[26px] md:text-[40px]">
+                  TEST ANY EIP
                 </GlitchText>
                 <br />
-                <span className="font-[family-name:var(--font-vt323)] text-[44px] md:text-[88px]">
-                  any EIP
-                </span>
-                <br />
-                <GlitchText color="cyan" className="text-[44px] md:text-[88px]">
-                  in an afternoon
+                <span className="font-[family-name:var(--font-vt323)] text-[44px] md:text-[84px]">
+                  on the
+                </span>{" "}
+                <GlitchText color="cyan" className="text-[44px] md:text-[84px]">
+                  EVVM stack
                 </GlitchText>
                 <span className="cursor-blink ml-2 text-[var(--color-matrix)]">▊</span>
               </h1>
 
               <p className="mt-6 max-w-xl text-base leading-relaxed text-[var(--color-text)]">
-                Modify the core. Add services. Mock the heavy crypto. Get the{" "}
-                <code className="bg-[var(--color-bg-deep)] px-1 text-[var(--color-vp-cyan)]">.sol</code>
-                {" "}files and a per-contract justification document — for any
-                EIP you want to model.
+                EVVM is where protocol-level experiments get modeled at the
+                contract layer. Bring an EIP and your own AI key — the Lab
+                reads it, agrees with you on what it is, maps it onto the
+                EVVM core, and hands back documented{" "}
+                <code className="bg-[var(--color-bg-deep)] px-1 text-[var(--color-vp-cyan)]">
+                  .sol
+                </code>{" "}
+                contracts.
               </p>
 
               <div className="mt-7 flex flex-wrap gap-3">
-                <PixelButton href="/#demos" variant="primary">
-                  Launch demo →
+                <PixelButton href="/lab" variant="primary" size="lg" bracket>
+                  Launch EIP Lab
                 </PixelButton>
-                <PixelButton href={SITE.skillRepo} external variant="secondary">
-                  View skill ↗
+                <PixelButton href="/#demos" variant="secondary" size="lg">
+                  See examples →
                 </PixelButton>
               </div>
             </div>
 
             {/* Right — nested terminal window with boot sequence */}
             <div>
-              <WindowFrame title="~/eiplab/boot" accent="cyan" controls={false}>
+              <WindowFrame title="~/eiplab/run" accent="cyan" controls={false}>
                 <BootSequence
                   charDelay={14}
                   lineDelay={130}
                   lines={[
-                    "loading skill modules...",
-                    "→ references/core-anatomy ✓",
-                    "→ references/eip-mapping-strategy ✓",
-                    "→ references/signature-surface ✓",
-                    "→ references/dependency-and-mocking ✓",
-                    "scaffolding experiment eip-N-<slug>",
-                    "writing manifest.json",
-                    "writing justification.md",
-                    "compiling 12 contracts (modified core + services + mocks)",
-                    "✓ ready in 23.4s",
+                    "provider: venice ai · model ready",
+                    "input: eip material loaded",
+                    "phase 01 → upload ✓",
+                    "phase 02 → read & agree on intent",
+                    "phase 03 → map onto evvm core",
+                    "  shape A: modify Core.sol",
+                    "  deps: 2 mocked, 1 simulated",
+                    "phase 04 → emit documented .sol",
+                    "✓ 12 contracts + justification",
                   ]}
                 />
               </WindowFrame>

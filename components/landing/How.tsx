@@ -1,36 +1,31 @@
 import WindowFrame from "@/components/ui/WindowFrame";
 import GlitchText from "@/components/ui/GlitchText";
+import PixelButton from "@/components/ui/PixelButton";
 
 const PHASES = [
   {
     n: "01",
     accent: "pink" as const,
-    title: "Read & summarize",
-    body: "Pull the EIP from eips.ethereum.org and produce a <200-word summary: status, category, surface touched, the single most important change.",
-  },
-  {
-    n: "1.5",
-    accent: "cyan" as const,
-    title: "Deps + mocks",
-    body: "Walk the declared `requires:` list AND the implicit deps. For each: vendor / mock / simulate / defer. Recorded in the manifest.",
+    title: "Upload",
+    body: "Load your EIP — paste the full text, or drop links (eips.ethereum.org, an Ethereum Magicians thread, a repo). No length limit. An important EIP can be hundreds of lines, and every line can matter.",
   },
   {
     n: "02",
-    accent: "purple" as const,
-    title: "Map the surface",
-    body: "Decide Shape A (modify Core), Shape B (new service), or Shape C (external adapter). Wrong shape is the most common failure mode.",
+    accent: "cyan" as const,
+    title: "Read & Agree",
+    body: "The Lab reads it and tells you what it is — status, surface, the real behavioral change. Then it asks: did I get the intent right? You correct it until you both agree. No forced word limit.",
   },
   {
     n: "03",
-    accent: "mint" as const,
-    title: "Scaffold",
-    body: "Create experiments/eip-N-<slug>/ with manifest, justification template, contracts directory, scratch notes folder.",
+    accent: "purple" as const,
+    title: "Map the surface",
+    body: "The technical conversation: which implementation shape (modify the core, add a service, or an external adapter), which dependencies to vendor / mock / simulate / defer, which EVVM contracts change and how.",
   },
   {
     n: "04",
-    accent: "pink" as const,
-    title: "Write & justify",
-    body: "Solidity in /contracts. Per-contract justification: what, why, EIP mapping, limitations. The justification IS the deliverable.",
+    accent: "mint" as const,
+    title: "Download .sol",
+    body: "The deliverable: documented, commented Solidity for the EVVM stack — modified core, new services, mocks — plus a per-contract justification. Download the package and take it from there.",
   },
 ];
 
@@ -50,17 +45,17 @@ export default function How() {
             // how it works
           </p>
           <h2 className="text-4xl leading-tight md:text-5xl">
-            <GlitchText color="purple">Five phases</GlitchText>, end at
+            <GlitchText color="purple">Four phases</GlitchText>, end at
             Solidity.
           </h2>
           <p className="mt-4 max-w-2xl text-[var(--color-text-muted)]">
-            The skill drives all five. You make the calls it can&apos;t —
-            which path when an EIP requires another draft EIP, which sub-
-            experiment when the scope is huge.
+            The EVVM EIP Lab drives all four. You make the calls it
+            can&apos;t — which path when an EIP requires another draft EIP,
+            which sub-experiment when the scope is huge.
           </p>
         </header>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {PHASES.map((p) => (
             <WindowFrame
               key={p.n}
@@ -77,6 +72,12 @@ export default function How() {
               </p>
             </WindowFrame>
           ))}
+        </div>
+
+        <div className="mt-8">
+          <PixelButton href="/lab" variant="primary" size="lg" bracket>
+            Launch EIP Lab
+          </PixelButton>
         </div>
       </div>
     </section>

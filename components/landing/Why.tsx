@@ -3,22 +3,22 @@ import GlitchText from "@/components/ui/GlitchText";
 
 const REASONS = [
   {
-    file: "speed.txt",
+    file: "evvm.txt",
     accent: "pink" as const,
-    headline: "Hours, not weeks",
-    body: "Skip the week-long ramp-up of finding the right Core surface, building mock infrastructure, and writing scaffolding. The agent already knows where every EIP class plugs in.",
+    headline: "Built for protocol experiments",
+    body: "EVVM's core contracts are modifiable, so an EIP — new signatures, nonce models, account abstraction, privacy, gas changes — can be modeled at the contract layer and exercised directly. It's the natural place to test protocol-level ideas.",
   },
   {
     file: "focus.txt",
     accent: "cyan" as const,
     headline: "Solidity + justification",
-    body: "Every experiment produces exactly two things: the .sol files and a per-contract justification document. Sharp scope. No half-finished extras to clean up.",
+    body: "Every run produces exactly two things: the documented .sol files and a per-contract justification. Sharp scope. No half-finished extras to clean up afterward.",
   },
   {
     file: "honesty.txt",
     accent: "purple" as const,
     headline: "Mocks called by name",
-    body: "Every mock contract carries an explicit `limitation` field — what it stubs, why, and what claims it does NOT support. Reviewers see real vs. fake at a glance.",
+    body: "Heavy dependencies (ZK proofs, exotic hashes, precompiles) get mocked — and every mock carries an explicit limitation: what it stubs and what claims it does NOT support. Real vs. stubbed, at a glance.",
   },
 ];
 
@@ -27,17 +27,17 @@ export default function Why() {
     <section id="why" className="mx-auto max-w-7xl px-4 py-20">
       <header className="mb-10 max-w-3xl">
         <p className="mb-2 font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-widest text-[var(--color-text-dim)]">
-          // why eiplab
+          // why evvm eip lab
         </p>
         <h2 className="text-4xl leading-tight md:text-5xl">
           The bottleneck isn&apos;t the EIP.
           <br />
-          <GlitchText color="cyan">It&apos;s everything around it.</GlitchText>
+          <GlitchText color="cyan">It&apos;s getting to running code.</GlitchText>
         </h2>
         <p className="mt-4 max-w-2xl text-[var(--color-text-muted)]">
-          Traditional EIP prototyping spends a week on plumbing before you
-          know if the idea even works. EIPLab compresses that to an
-          afternoon — and is honest about what it can and can&apos;t prove.
+          Going from an EIP to contracts you can reason about usually means
+          days of plumbing. The Lab compresses that — and is honest about
+          what it can and can&apos;t prove.
         </p>
       </header>
 

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SITE, DOCS } from "@/lib/constants";
 
 export default function Footer() {
@@ -18,8 +19,9 @@ export default function Footer() {
               <span className="cursor-blink ml-0.5 text-[var(--color-matrix)]">▊</span>
             </div>
             <p className="mt-2 max-w-md">
-              An AI-agent skill for prototyping EIPs. Solidity contracts +
-              per-contract justification, in afternoons not weeks.
+              The lab for testing new EIPs on EVVM. Bring an EIP and your
+              own AI key; get documented Solidity + per-contract
+              justification back.
             </p>
           </div>
           <div>
@@ -28,9 +30,7 @@ export default function Footer() {
             </div>
             <ul className="space-y-1">
               <li>
-                <a href={SITE.skillRepo} target="_blank" rel="noreferrer">
-                  skill repo ↗
-                </a>
+                <Link href="/lab">launch lab →</Link>
               </li>
               <li>
                 <a href={SITE.github} target="_blank" rel="noreferrer">

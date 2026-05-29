@@ -9,43 +9,58 @@ interface QA {
 
 const QAS: QA[] = [
   {
-    q: "Can I run my own EIP through this site?",
+    q: "Can I run my own EIP?",
     a: (
       <>
-        Not on this site. EIPLab is an agent skill — you install it in your
-        editor (Claude Code, Cursor, etc.) and ask your agent to prototype
-        any EIP. This site is the marketing demo for what the skill
-        produces.
+        Yes — that&apos;s the whole point.{" "}
+        <a href="/lab">Launch the Lab</a>, pick a provider, paste your API
+        key, drop in an EIP (text or links), and walk the four phases.
+        The examples below are pre-baked runs so you can see the output
+        shape before you spend a token.
       </>
     ),
   },
   {
-    q: "What does the skill actually output?",
+    q: "What does a run produce?",
     a: (
       <>
-        Per experiment: a folder containing the{" "}
-        <code>.sol</code> files (modified core, new services, mocks), a{" "}
-        <code>justification.md</code> document explaining each contract,
-        and a <code>manifest.json</code> tracking dependencies and mock
-        limitations. That&apos;s it.
+        Documented <code>.sol</code> files (modified core, new services,
+        mocks) plus a per-contract justification, bundled into a
+        downloadable package. No tests, no deploy scripts, no EIP draft —
+        the deliverable is documented Solidity.
       </>
     ),
   },
   {
-    q: "What's the recommended way to actually use the contracts?",
+    q: "Whose API key is used, and is it safe?",
     a: (
       <>
-        Drop them into{" "}
+        Yours. The Lab works with your own provider key (Venice AI to
+        start). The key is sent per-request to our proxy, forwarded to the
+        provider, and discarded — never written to our storage, never
+        logged. We record only token counts (for EVVM&apos;s research on
+        AI + EIP cost).
+      </>
+    ),
+  },
+  {
+    q: "How should I test the contracts the Lab gives me?",
+    a: (
+      <>
+        For local testing we recommend{" "}
         <a href={SITE.scaffoldEvvm} target="_blank" rel="noreferrer">
           scaffold-evvm
-        </a>
-        . It runs a full local EVVM stack on Anvil or Hardhat Network, the
-        wizard handles deployment, and the contracts EIPLab produces fit
-        straight into <code>experiments/eip-N-slug/</code>. See the{" "}
+        </a>{" "}
+        — it runs the full EVVM stack on Anvil or Hardhat Network, and the
+        contracts drop straight into <code>experiments/</code>. See the{" "}
         <a href={DOCS.scaffoldEvvm} target="_blank" rel="noreferrer">
           scaffold-evvm docs
         </a>{" "}
-        for setup.
+        and{" "}
+        <a href={DOCS.howToMakeService} target="_blank" rel="noreferrer">
+          how to make an EVVM service
+        </a>
+        . The downloaded package includes a guide for this.
       </>
     ),
   },
@@ -53,22 +68,31 @@ const QAS: QA[] = [
     q: "How does it handle EIPs that depend on other draft EIPs?",
     a: (
       <>
-        Phase 1.5 (the dependency survey) is the answer. For each required
-        EIP, you pick one of four strategies: vendor, mock, simulate, or
-        defer. The manifest records the choice. For draft EIPs without
-        coverage, the agent offers two paths: model the dep first as a
-        prerequisite experiment, or mock the minimum surface.
+        The map phase does a dependency survey. For each required EIP you
+        pick a strategy: vendor, mock, simulate, or defer. For draft EIPs
+        without coverage, the Lab offers two paths — model the dependency
+        first as a prerequisite, or mock the minimum surface.
       </>
     ),
   },
   {
-    q: "What about really large EIPs (8141-style)?",
+    q: "What about really large EIPs?",
     a: (
       <>
-        The skill refuses single experiments when more than ~5 distinct
-        mocks are needed and proposes decomposition into sub-experiments
-        instead. Each sub-experiment has its own clean dependency slice.
-        Better to ship three small experiments than one tangled one.
+        When more than ~5 distinct mocks are needed, the Lab proposes
+        decomposing into sub-experiments instead of one tangled attempt.
+        Each sub-experiment has its own clean dependency slice.
+      </>
+    ),
+  },
+  {
+    q: "Why track token counts?",
+    a: (
+      <>
+        EVVM is studying the cost and behavior of AI models on
+        protocol-level work — for a research write-up and to make the
+        economics of EIP prototyping transparent. The live meter shows
+        your spend; we aggregate only anonymous counts.
       </>
     ),
   },
@@ -76,36 +100,12 @@ const QAS: QA[] = [
     q: "Is it open source?",
     a: (
       <>
-        Yes. Both the frontend and the skill are under the{" "}
+        Yes, under the{" "}
         <a href={DOCS.license} target="_blank" rel="noreferrer">
           EVVM Noncommercial License v1.0
         </a>
         . Free for research, personal, and noncommercial use. Commercial
-        use requires a separate license — contact{" "}
-        <code>g@evvm.org</code>.
-      </>
-    ),
-  },
-  {
-    q: "Which AI agents work with this skill?",
-    a: (
-      <>
-        Any agent that loads SKILL.md-format skills from a project&apos;s{" "}
-        <code>.claude/skills/</code> (or equivalent) directory. Claude
-        Code, Cursor, GitHub Copilot, Aider, and any custom agent built
-        against the open skill standard. The skill itself is
-        agent-agnostic.
-      </>
-    ),
-  },
-  {
-    q: "Why a separate skill instead of a hosted service?",
-    a: (
-      <>
-        Researchers already have the agent running locally with full
-        context of their codebase. Shipping EIPLab as a skill means it
-        composes with everything else they&apos;ve set up — no API keys, no
-        rate limits, no data leaving their machine.
+        use requires a separate license — contact <code>g@evvm.org</code>.
       </>
     ),
   },

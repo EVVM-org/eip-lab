@@ -5,19 +5,28 @@ or any other SKILL.md-aware agent) working inside this repo.
 
 ## What this repo is
 
-The **marketing + demo site for EIPLab**. The actual EIPLab skill
-(the "backend") lives in a separate repo:
-[EIPskillevvmsandbox](https://github.com/EVVM-org/EIPskillevvmsandbox).
-This frontend exists to show developers what that skill produces, so
-they can decide whether to install it.
+**EVVM EIP Lab** — a hosted product. The site is the app: a user
+brings an EIP and their own AI provider key (Venice AI to start),
+and the Lab returns documented Solidity for the EVVM stack across a
+four-phase flow (upload → read & agree → map the surface → download).
+
+Do NOT call this a "skill" in user-facing copy. The product name is
+**EVVM EIP Lab**. Emphasize EVVM as the place to test EIPs and
+protocol-level experiments.
+
+The site has both a marketing landing AND a functional app at `/lab`
+backed by API routes under `app/api/`.
 
 ## Stack and constraints
 
 - **Next.js 15 App Router + React 19 + TypeScript strict.**
 - **Tailwind v4** (uses `@import "tailwindcss"` in CSS + `@theme`
   directive; no `tailwind.config.ts` for basic theming).
-- **No backend.** All content is static. Don't add API routes, server
-  actions that mutate state, databases, or auth.
+- **Backend is limited to provider proxying.** API routes under
+  `app/api/` proxy the user's AI key to the provider and discard it.
+  The user's API key is NEVER stored or logged — only token counts
+  are logged (for cost research). Don't add a database, user accounts,
+  or any server-side key persistence.
 - **Static demo content under `content/demos/`.** Each EIP has its own
   folder with `manifest.json`, `justification.md`, and `contracts/*.sol`.
   The frontend reads these at build time.
