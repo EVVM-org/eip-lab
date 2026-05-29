@@ -57,16 +57,81 @@ export const PROVIDERS: readonly ProviderConfig[] = [
     keyUrl: "https://venice.ai/settings/api",
     docsUrl: "https://docs.venice.ai/api-reference/api-spec",
     fallbackModels: [
-      "venice-uncensored",
-      "llama-3.3-70b",
-      "qwen-2.5-qwq-32b",
-      "deepseek-r1-671b",
+      "qwen3-coder-480b-a35b-instruct-turbo",
+      "openai-gpt-53-codex",
+      "deepseek-v4-pro",
+      "claude-sonnet-4-6",
     ],
     enabled: true,
   },
 ] as const;
 
 export const DEFAULT_PROVIDER_ID = "venice";
+
+export type ModelTier = "default" | "premium" | "value" | "balanced";
+
+export interface RecommendedModel {
+  /** Exact Venice model slug. */
+  id: string;
+  tier: ModelTier;
+  /** One-line rationale shown in the picker. */
+  note: string;
+}
+
+/**
+ * Curated shortlist of Venice models that fit the EIP Lab job. The
+ * picker only offers these (intersected with what the user's key can
+ * access). Ordered best-first; the first available one is auto-selected.
+ *
+ * Selection criteria, in priority order:
+ *   1. Large maxCompletionTokens — the contracts phase emits multiple
+ *      full .sol files; small-output models truncate badly.
+ *   2. Code quality.
+ *   3. Big context (EIP + forum + repo + transcript).
+ *   4. Cost (the user's spend; also the research data).
+ */
+export const RECOMMENDED_MODELS: readonly RecommendedModel[] = [
+  {
+    id: "qwen3-coder-480b-a35b-instruct-turbo",
+    tier: "default",
+    note: "Coder · 65k output · 256k ctx · cheap — best all-round",
+  },
+  {
+    id: "openai-gpt-53-codex",
+    tier: "premium",
+    note: "Codex · 128k output · 400k ctx — top code quality",
+  },
+  {
+    id: "claude-opus-4-8",
+    tier: "premium",
+    note: "Best reasoning · 1M ctx — for the hardest EIPs",
+  },
+  {
+    id: "claude-sonnet-4-6",
+    tier: "balanced",
+    note: "Strong quality/price balance · 64k output",
+  },
+  {
+    id: "deepseek-v4-pro",
+    tier: "value",
+    note: "1M ctx · strong code · low cost",
+  },
+  {
+    id: "deepseek-v4-flash",
+    tier: "value",
+    note: "Cheapest viable full run · 1M ctx",
+  },
+  {
+    id: "zai-org-glm-5",
+    tier: "balanced",
+    note: "Solid mid-tier coder · 198k ctx",
+  },
+  {
+    id: "qwen3-5-397b-a17b",
+    tier: "balanced",
+    note: "Large MoE · 32k output",
+  },
+] as const;
 
 export type DemoAccent = "neon-pink" | "neon-cyan" | "neon-purple";
 export type DemoShape = "A" | "B" | "C";

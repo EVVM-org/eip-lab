@@ -4,7 +4,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import WindowFrame from "@/components/ui/WindowFrame";
 import PixelButton from "@/components/ui/PixelButton";
 import Tag from "@/components/ui/Tag";
-import { PROVIDERS, DEFAULT_PROVIDER_ID } from "@/lib/constants";
+import {
+  PROVIDERS,
+  DEFAULT_PROVIDER_ID,
+  RECOMMENDED_MODELS,
+} from "@/lib/constants";
 import { detectLinks, type DetectedLink } from "@/lib/linkDetect";
 import { parseLabFiles, type LabFile } from "@/lib/labFiles";
 import { buildZip, downloadBlob } from "@/lib/zip";
@@ -115,12 +119,15 @@ export default function LabApp() {
       });
       const json = await res.json();
       const list: ModelInfo[] = json.models ?? [];
-      setModels(list);
-      // Preselect a coder model when available, else the first model.
-      if (list.length) {
-        const coder = list.find((m) => m.optimizedForCode);
-        setModel((coder ?? list[0]).id);
-      }
+      // Offer only the curated best-fit models that this key can access,
+      // in recommended (best-first) order. If none are available, fall
+      // back to the full list so the picker is never empty.
+      const curated = RECOMMENDED_MODELS.map((r) =>
+        list.find((m) => m.id === r.id),
+      ).filter(Boolean) as ModelInfo[];
+      const finalList = curated.length ? curated : list;
+      setModels(finalList);
+      if (finalList.length) setModel(finalList[0].id);
       if (json.warning) setError(`Note: ${json.warning}`);
     } catch {
       const fb = provider.fallbackModels.map((id) => ({ id }) as ModelInfo);
@@ -384,15 +391,38 @@ License: EVVM Noncommercial License v1.0
                     onChange={(e) => setModel(e.target.value)}
                     className="flex-1 border-2 border-[rgba(255,255,255,0.15)] bg-[#07010f] px-2 py-1.5 font-[family-name:var(--font-mono)] text-xs text-[var(--color-text)] focus:border-[var(--color-vp-cyan)] focus:outline-none"
                   >
-                    {models.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.optimizedForCode ? "◆ " : ""}
-                        {m.id}
-                      </option>
-                    ))}
+                    {models.map((m, i) => {
+                      const rec = RECOMMENDED_MODELS.find(
+                        (r) => r.id === m.id,
+                      );
+                      const prefix =
+                        i === 0 ? "★ " : rec?.tier === "premium" ? "◆ " : "";
+                      return (
+                        <option key={m.id} value={m.id}>
+                          {prefix}
+                          {m.id}
+                          {rec ? `  — ${rec.tier}` : ""}
+                        </option>
+                      );
+                    })}
                   </select>
                 )}
               </div>
+
+              {selectedModel &&
+                (() => {
+                  const rec = RECOMMENDED_MODELS.find(
+                    (r) => r.id === selectedModel.id,
+                  );
+                  return rec ? (
+                    <p className="font-[family-name:var(--font-mono)] text-[10px] leading-relaxed text-[var(--color-text-muted)]">
+                      <span className="text-[var(--color-matrix)]">
+                        {rec.tier === "default" ? "★ recommended" : rec.tier}
+                      </span>{" "}
+                      — {rec.note}
+                    </p>
+                  ) : null;
+                })()}
 
               {selectedModel && (
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-[family-name:var(--font-mono)] text-[10px] text-[var(--color-text-dim)]">
@@ -418,6 +448,15 @@ License: EVVM Noncommercial License v1.0
                     )}
                 </div>
               )}
+
+              {selectedModel?.maxCompletionTokens != null &&
+                selectedModel.maxCompletionTokens < 16000 && (
+                  <p className="border-2 border-[var(--color-amber)] bg-[rgba(255,176,0,0.08)] px-2 py-1.5 font-[family-name:var(--font-mono)] text-[10px] text-[var(--color-amber)]">
+                    ⚠ {Math.round(selectedModel.maxCompletionTokens / 1000)}k
+                    max output — the contracts phase may truncate; you&apos;ll
+                    use the &quot;continue&quot; button more.
+                  </p>
+                )}
 
               {selectedModel?.supportsReasoning && (
                 <label className="flex items-center gap-2 font-[family-name:var(--font-mono)] text-[11px] text-[var(--color-text-muted)]">
