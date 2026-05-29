@@ -27,6 +27,8 @@ export interface ChatResult {
   content: string;
   model: string;
   usage: ChatUsage | null;
+  /** "stop" = complete; "length" = hit max_tokens (truncated). */
+  finishReason: string | null;
 }
 
 export interface VeniceError {
@@ -97,7 +99,10 @@ export async function chatCompletion(
   }
 
   const json = (await res.json()) as {
-    choices?: Array<{ message?: { content?: string } }>;
+    choices?: Array<{
+      message?: { content?: string };
+      finish_reason?: string;
+    }>;
     model?: string;
     usage?: ChatUsage;
   };
@@ -106,5 +111,6 @@ export async function chatCompletion(
     content: json.choices?.[0]?.message?.content ?? "",
     model: json.model ?? params.model,
     usage: json.usage ?? null,
+    finishReason: json.choices?.[0]?.finish_reason ?? null,
   };
 }

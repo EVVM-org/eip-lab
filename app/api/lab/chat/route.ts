@@ -76,8 +76,8 @@ export async function POST(req: NextRequest) {
     const result = await chatCompletion(body.apiKey, {
       model: body.model,
       messages,
-      // Contracts phase needs room for multiple files.
-      maxTokens: phase === "contracts" ? 8192 : 3072,
+      // Contracts phase emits multiple full files — give it real room.
+      maxTokens: phase === "contracts" ? 32000 : 4096,
       temperature: phase === "contracts" ? 0.2 : 0.4,
     }, provider.baseUrl);
 
@@ -95,6 +95,7 @@ export async function POST(req: NextRequest) {
       content: result.content,
       model: result.model,
       usage: result.usage,
+      truncated: result.finishReason === "length",
     });
   } catch (err) {
     const e = err as VeniceError;

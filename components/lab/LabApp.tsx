@@ -43,6 +43,8 @@ export default function LabApp() {
 
   const [tokens, setTokens] = useState({ prompt: 0, completion: 0, total: 0 });
   const [files, setFiles] = useState<LabFile[]>([]);
+  const [contractsRaw, setContractsRaw] = useState("");
+  const [truncated, setTruncated] = useState(false);
 
   const transcriptRef = useRef<HTMLDivElement>(null);
 
@@ -139,7 +141,11 @@ export default function LabApp() {
     }
   }
 
-  async function send(toPhase: Phase, userContent: string) {
+  async function send(
+    toPhase: Phase,
+    userContent: string,
+    opts?: { append?: boolean },
+  ) {
     if (!model) {
       setError("Pick a model first.");
       return;
@@ -188,8 +194,14 @@ export default function LabApp() {
         }));
       }
 
+      setTruncated(Boolean(json.truncated));
+
       if (toPhase === "contracts") {
-        setFiles(parseLabFiles(assistant.content));
+        // Accumulate across continuations so multi-part generations
+        // parse into complete files.
+        const raw = (opts?.append ? contractsRaw : "") + assistant.content;
+        setContractsRaw(raw);
+        setFiles(parseLabFiles(raw));
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "request failed");
@@ -232,6 +244,8 @@ License: EVVM Noncommercial License v1.0
     setPhase("upload");
     setMessages([]);
     setFiles([]);
+    setContractsRaw("");
+    setTruncated(false);
     setTokens({ prompt: 0, completion: 0, total: 0 });
     setError(null);
   }
@@ -506,6 +520,22 @@ License: EVVM Noncommercial License v1.0
                   </span>
                 )}
 
+                {truncated && !busy && (
+                  <PixelButton
+                    variant="phosphor"
+                    size="sm"
+                    onClick={() =>
+                      send(
+                        phase,
+                        "Continue exactly where you left off. Do not repeat anything already written — if you stopped mid-file, resume mid-file and keep the FILE: structure intact.",
+                        { append: true },
+                      )
+                    }
+                  >
+                    ⚠ truncated → continue
+                  </PixelButton>
+                )}
+
                 {phase === "summarize" && !busy && (
                   <PixelButton
                     variant="secondary"
@@ -547,6 +577,13 @@ License: EVVM Noncommercial License v1.0
       {files.length > 0 && (
         <div className="mt-4">
           <WindowFrame title="~/eiplab/output" accent="mint" glow>
+            {truncated && (
+              <div className="mb-3 border-2 border-[var(--color-amber)] bg-[rgba(255,176,0,0.08)] px-3 py-2 font-[family-name:var(--font-mono)] text-[11px] text-[var(--color-amber)]">
+                ⚠ last response was cut off at the token limit — files may be
+                incomplete. Click &quot;truncated → continue&quot; above before
+                downloading.
+              </div>
+            )}
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <span className="font-[family-name:var(--font-mono)] text-sm text-[var(--color-text)]">
                 {files.length} file{files.length === 1 ? "" : "s"} generated
