@@ -36,11 +36,54 @@ export interface VeniceError {
   message: string;
 }
 
-/** List models available to this key. Returns model id strings. */
+/** Rich model info parsed from Venice's /models model_spec. */
+export interface ModelInfo {
+  id: string;
+  contextTokens?: number;
+  maxCompletionTokens?: number;
+  optimizedForCode?: boolean;
+  supportsReasoning?: boolean;
+  /** USD per 1M input (prompt) tokens. */
+  inputUsdPerMtok?: number;
+  /** USD per 1M output (completion) tokens. */
+  outputUsdPerMtok?: number;
+}
+
+interface RawModel {
+  id: string;
+  model_spec?: {
+    availableContextTokens?: number;
+    maxCompletionTokens?: number;
+    optimizedForCode?: boolean;
+    supportsReasoning?: boolean;
+    pricing?: {
+      input?: { usd?: number };
+      output?: { usd?: number };
+    };
+  };
+}
+
+function parseModel(m: RawModel): ModelInfo {
+  const s = m.model_spec ?? {};
+  return {
+    id: m.id,
+    contextTokens: s.availableContextTokens,
+    maxCompletionTokens: s.maxCompletionTokens,
+    optimizedForCode: s.optimizedForCode,
+    supportsReasoning: s.supportsReasoning,
+    inputUsdPerMtok: s.pricing?.input?.usd,
+    outputUsdPerMtok: s.pricing?.output?.usd,
+  };
+}
+
+/**
+ * List models available to this key, with capability + pricing parsed
+ * from Venice's model_spec. Coder-optimized models are sorted first.
+ */
 export async function listModels(
   apiKey: string,
   baseUrl: string = VENICE_BASE,
-): Promise<string[]> {
+): Promise<ModelInfo[]> {
   const res = await fetch(`${baseUrl}/models`, {
     method: "GET",
     headers: {
@@ -57,8 +100,18 @@ export async function listModels(
     } satisfies VeniceError;
   }
 
-  const json = (await res.json()) as { data?: Array<{ id: string }> };
-  return (json.data ?? []).map((m) => m.id).filter(Boolean);
+  const json = (await res.json()) as { data?: RawModel[] };
+  const models = (json.data ?? [])
+    .filter((m) => m.id)
+    .map(parseModel);
+
+  // Coder models first, then the rest, each alphabetical.
+  return models.sort((a, b) => {
+    const ac = a.optimizedForCode ? 0 : 1;
+    const bc = b.optimizedForCode ? 0 : 1;
+    if (ac !== bc) return ac - bc;
+    return a.id.localeCompare(b.id);
+  });
 }
 
 /**
@@ -73,9 +126,17 @@ export async function chatCompletion(
     messages: ChatMessage[];
     maxTokens?: number;
     temperature?: number;
+    /** Append Venice's strip_thinking_response feature suffix. */
+    stripThinking?: boolean;
   },
   baseUrl: string = VENICE_BASE,
 ): Promise<ChatResult> {
+  // Venice feature-suffix system: parameters can be passed through the
+  // model id. strip_thinking_response keeps reasoning-model <thinking>
+  // blocks out of the content so they don't pollute the .sol output.
+  const modelId = params.stripThinking
+    ? `${params.model}:strip_thinking_response=true`
+    : params.model;
   const res = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
@@ -83,7 +144,7 @@ export async function chatCompletion(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: params.model,
+      model: modelId,
       messages: params.messages,
       max_tokens: params.maxTokens ?? 4096,
       temperature: params.temperature ?? 0.4,

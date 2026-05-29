@@ -34,6 +34,8 @@ export async function POST(req: NextRequest) {
     phase?: LabPhase;
     messages?: ChatMessage[];
     eipContext?: string;
+    maxCompletionTokens?: number;
+    stripThinking?: boolean;
   };
   try {
     body = await req.json();
@@ -73,12 +75,20 @@ export async function POST(req: NextRequest) {
   ];
 
   try {
+    // Contracts phase emits multiple full files — give it real room,
+    // but never exceed the model's own max-completion limit.
+    const desired = phase === "contracts" ? 32000 : 4096;
+    const cap = body.maxCompletionTokens && body.maxCompletionTokens > 0
+      ? body.maxCompletionTokens
+      : desired;
+    const maxTokens = Math.min(desired, cap);
+
     const result = await chatCompletion(body.apiKey, {
       model: body.model,
       messages,
-      // Contracts phase emits multiple full files — give it real room.
-      maxTokens: phase === "contracts" ? 32000 : 4096,
+      maxTokens,
       temperature: phase === "contracts" ? 0.2 : 0.4,
+      stripThinking: body.stripThinking ?? true,
     }, provider.baseUrl);
 
     // Research telemetry: counts only. No key, no content.

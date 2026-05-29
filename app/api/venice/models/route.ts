@@ -35,15 +35,17 @@ export async function POST(req: NextRequest) {
   try {
     const models = await listModels(body.apiKey, provider.baseUrl);
     return NextResponse.json({
-      models: models.length ? models : provider.fallbackModels,
+      models: models.length
+        ? models
+        : provider.fallbackModels.map((id) => ({ id })),
     });
   } catch (err) {
     const e = err as VeniceError;
-    // Fall back to the static list so the UI still works if the
-    // provider's /models call is unavailable.
+    // Fall back to the static list (ids only) so the UI still works if
+    // the provider's /models call is unavailable.
     return NextResponse.json(
       {
-        models: provider.fallbackModels,
+        models: provider.fallbackModels.map((id) => ({ id })),
         warning: e.message ?? "model list unavailable; using fallback",
       },
       { status: 200 },

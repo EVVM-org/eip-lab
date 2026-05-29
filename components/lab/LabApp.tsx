@@ -8,7 +8,7 @@ import { PROVIDERS, DEFAULT_PROVIDER_ID } from "@/lib/constants";
 import { detectLinks, type DetectedLink } from "@/lib/linkDetect";
 import { parseLabFiles, type LabFile } from "@/lib/labFiles";
 import { buildZip, downloadBlob } from "@/lib/zip";
-import type { ChatMessage, ChatUsage } from "@/lib/venice";
+import type { ChatMessage, ChatUsage, ModelInfo } from "@/lib/venice";
 
 type Phase = "upload" | "summarize" | "map" | "contracts";
 
@@ -27,9 +27,12 @@ export default function LabApp() {
 
   const [apiKey, setApiKey] = useState("");
   const [rememberKey, setRememberKey] = useState(false);
-  const [models, setModels] = useState<string[]>([]);
+  const [models, setModels] = useState<ModelInfo[]>([]);
   const [model, setModel] = useState("");
   const [modelsLoading, setModelsLoading] = useState(false);
+  const [stripThinking, setStripThinking] = useState(true);
+
+  const selectedModel = models.find((m) => m.id === model);
 
   const [eipText, setEipText] = useState("");
   const [fetchedContext, setFetchedContext] = useState<Record<string, string>>(
@@ -42,6 +45,7 @@ export default function LabApp() {
   const [error, setError] = useState<string | null>(null);
 
   const [tokens, setTokens] = useState({ prompt: 0, completion: 0, total: 0 });
+  const [costUsd, setCostUsd] = useState(0);
   const [files, setFiles] = useState<LabFile[]>([]);
   const [contractsRaw, setContractsRaw] = useState("");
   const [truncated, setTruncated] = useState(false);
@@ -110,13 +114,18 @@ export default function LabApp() {
         body: JSON.stringify({ providerId, apiKey }),
       });
       const json = await res.json();
-      const list: string[] = json.models ?? [];
+      const list: ModelInfo[] = json.models ?? [];
       setModels(list);
-      if (list.length && !model) setModel(list[0]);
+      // Preselect a coder model when available, else the first model.
+      if (list.length) {
+        const coder = list.find((m) => m.optimizedForCode);
+        setModel((coder ?? list[0]).id);
+      }
       if (json.warning) setError(`Note: ${json.warning}`);
     } catch {
-      setModels(provider.fallbackModels);
-      if (provider.fallbackModels.length) setModel(provider.fallbackModels[0]);
+      const fb = provider.fallbackModels.map((id) => ({ id }) as ModelInfo);
+      setModels(fb);
+      if (fb.length) setModel(fb[0].id);
     } finally {
       setModelsLoading(false);
     }
@@ -171,8 +180,17 @@ export default function LabApp() {
           phase: toPhase,
           messages: nextMessages,
           eipContext,
+          maxCompletionTokens: selectedModel?.maxCompletionTokens,
+          stripThinking,
         }),
       });
+      if (res.status === 429) {
+        setError(
+          "Rate limited by the provider — wait a few seconds and retry.",
+        );
+        setBusy(false);
+        return;
+      }
       const json = await res.json();
       if (json.error) {
         setError(json.error);
@@ -192,6 +210,15 @@ export default function LabApp() {
           completion: t.completion + (usage.completion_tokens ?? 0),
           total: t.total + (usage.total_tokens ?? 0),
         }));
+        // Live USD using the selected model's per-Mtok pricing.
+        const inUsd = selectedModel?.inputUsdPerMtok;
+        const outUsd = selectedModel?.outputUsdPerMtok;
+        if (inUsd != null && outUsd != null) {
+          const cost =
+            ((usage.prompt_tokens ?? 0) / 1e6) * inUsd +
+            ((usage.completion_tokens ?? 0) / 1e6) * outUsd;
+          setCostUsd((c) => c + cost);
+        }
       }
 
       setTruncated(Boolean(json.truncated));
@@ -247,6 +274,7 @@ License: EVVM Noncommercial License v1.0
     setContractsRaw("");
     setTruncated(false);
     setTokens({ prompt: 0, completion: 0, total: 0 });
+    setCostUsd(0);
     setError(null);
   }
 
@@ -357,13 +385,50 @@ License: EVVM Noncommercial License v1.0
                     className="flex-1 border-2 border-[rgba(255,255,255,0.15)] bg-[#07010f] px-2 py-1.5 font-[family-name:var(--font-mono)] text-xs text-[var(--color-text)] focus:border-[var(--color-vp-cyan)] focus:outline-none"
                   >
                     {models.map((m) => (
-                      <option key={m} value={m}>
-                        {m}
+                      <option key={m.id} value={m.id}>
+                        {m.optimizedForCode ? "◆ " : ""}
+                        {m.id}
                       </option>
                     ))}
                   </select>
                 )}
               </div>
+
+              {selectedModel && (
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-[family-name:var(--font-mono)] text-[10px] text-[var(--color-text-dim)]">
+                  {selectedModel.optimizedForCode && (
+                    <span className="text-[var(--color-matrix)]">◆ code</span>
+                  )}
+                  {selectedModel.supportsReasoning && (
+                    <span className="text-[var(--color-vp-purple)]">
+                      reasoning
+                    </span>
+                  )}
+                  {selectedModel.contextTokens != null && (
+                    <span>
+                      ctx {Math.round(selectedModel.contextTokens / 1000)}k
+                    </span>
+                  )}
+                  {selectedModel.inputUsdPerMtok != null &&
+                    selectedModel.outputUsdPerMtok != null && (
+                      <span className="text-[var(--color-vp-cyan)]">
+                        ${selectedModel.inputUsdPerMtok}/$
+                        {selectedModel.outputUsdPerMtok} per Mtok
+                      </span>
+                    )}
+                </div>
+              )}
+
+              {selectedModel?.supportsReasoning && (
+                <label className="flex items-center gap-2 font-[family-name:var(--font-mono)] text-[11px] text-[var(--color-text-muted)]">
+                  <input
+                    type="checkbox"
+                    checked={stripThinking}
+                    onChange={(e) => setStripThinking(e.target.checked)}
+                  />
+                  strip &lt;thinking&gt; from output (recommended)
+                </label>
+              )}
             </div>
           </WindowFrame>
 
@@ -462,9 +527,22 @@ License: EVVM Noncommercial License v1.0
               <Meter label="completion" value={tokens.completion} />
               <Meter label="total tok" value={tokens.total} accent />
             </div>
+            <div className="mt-2 flex items-center justify-between border-2 border-[var(--color-matrix)] px-3 py-2 font-[family-name:var(--font-mono)] glow-matrix">
+              <span className="text-[9px] uppercase tracking-widest text-[var(--color-text-dim)]">
+                est. cost (usd)
+              </span>
+              <span className="text-lg font-bold tabular-nums text-[var(--color-matrix)]">
+                {costUsd > 0
+                  ? `$${costUsd.toFixed(4)}`
+                  : selectedModel?.inputUsdPerMtok != null
+                    ? "$0.0000"
+                    : "—"}
+              </span>
+            </div>
             <p className="mt-2 font-[family-name:var(--font-mono)] text-[9px] text-[var(--color-text-dim)]">
-              token counts per session — used for EVVM&apos;s research on
-              AI + EIP cost.
+              {selectedModel?.inputUsdPerMtok != null
+                ? "estimated from the model's per-Mtok pricing × tokens used. logged anonymously for EVVM's AI + EIP cost research."
+                : "pick a model with pricing to see live cost. counts logged for EVVM's AI + EIP cost research."}
             </p>
           </WindowFrame>
         </div>
