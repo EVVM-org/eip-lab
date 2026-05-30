@@ -198,7 +198,35 @@ export default function LabApp() {
         setBusy(false);
         return;
       }
-      const json = await res.json();
+
+      // Read as text first so a non-JSON response (timeout page,
+      // gateway error) doesn't crash the parser.
+      const text = await res.text();
+      let json: {
+        content?: string;
+        usage?: ChatUsage | null;
+        truncated?: boolean;
+        error?: string;
+      } | null = null;
+      try {
+        json = text ? JSON.parse(text) : null;
+      } catch {
+        json = null;
+      }
+
+      if (!res.ok || !json) {
+        const timedOut =
+          res.status === 504 ||
+          /timeout|timed out|FUNCTION_INVOCATION_TIMEOUT/i.test(text);
+        setError(
+          json?.error ??
+            (timedOut
+              ? "The generation took too long and the server timed out. Try a smaller/faster model, or click “continue” to resume in chunks."
+              : `Request failed (${res.status}). ${text.slice(0, 140)}`),
+        );
+        setBusy(false);
+        return;
+      }
       if (json.error) {
         setError(json.error);
         setBusy(false);

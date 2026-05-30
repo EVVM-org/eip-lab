@@ -9,6 +9,11 @@ import { PROVIDERS } from "@/lib/constants";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// The contracts phase can generate for minutes. Ask Vercel for the
+// longest allowed function duration (capped to the plan limit:
+// 60s on Hobby, up to 300s on Pro). Without this, long generations
+// time out and return a non-JSON error page.
+export const maxDuration = 300;
 
 /**
  * POST /api/lab/chat
