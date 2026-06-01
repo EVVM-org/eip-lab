@@ -50,10 +50,21 @@ Three implementation shapes for an EIP:
 When a dependency the EVM/EVVM doesn't have is required (a ZK proof
 system, a hash like Poseidon, a signature scheme, a fixed-address
 system contract), choose one strategy per dependency and state it:
+  - mock     (a complete, deterministic stub you WRITE in this package)
   - vendor   (use an existing Solidity implementation)
-  - mock     (admin-controlled stub matching the interface)
   - simulate (deploy canonical bytecode at a fixed address)
   - defer    (out of contract scope — e.g. mempool/node policy)
+
+SELF-CONTAINED OUTPUT RULE: the package must be readable and complete
+on its own. STRONGLY PREFER 'mock' for ZK proof systems, Poseidon /
+exotic hashes, and signature schemes — emit a complete deterministic
+mock contract (e.g. keccak-based hashing, an admin/verdict-controlled
+verifier) plus its interface, IN THIS PACKAGE, each with a
+"Limitations:" note. NEVER 'import' a path you do not also output in
+this package (no @iden3/..., no ../vendor/..., no snarkjs verifier you
+didn't write). The only acceptable external imports are ubiquitous
+OpenZeppelin primitives (IERC20, ECDSA) — and even those you may inline
+if it keeps the package self-contained.
 
 EVVM Core public surface (use these EXACT signatures; do not invent
 function names — Solidity 0.8.30):
