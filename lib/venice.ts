@@ -175,3 +175,88 @@ export async function chatCompletion(
     finishReason: json.choices?.[0]?.finish_reason ?? null,
   };
 }
+
+export interface StreamEvent {
+  delta?: string;
+  usage?: ChatUsage;
+  finishReason?: string;
+}
+
+/**
+ * Streaming chat completion. Yields content deltas as they arrive, plus
+ * a final usage/finishReason. Streaming keeps the connection alive so
+ * long generations don't look frozen and don't trip serverless timeouts.
+ */
+export async function* streamChatCompletion(
+  apiKey: string,
+  params: {
+    model: string;
+    messages: ChatMessage[];
+    maxTokens?: number;
+    temperature?: number;
+    stripThinking?: boolean;
+  },
+  baseUrl: string = VENICE_BASE,
+): AsyncGenerator<StreamEvent> {
+  const modelId = params.stripThinking
+    ? `${params.model}:strip_thinking_response=true`
+    : params.model;
+
+  const res = await fetch(`${baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: modelId,
+      messages: params.messages,
+      max_tokens: params.maxTokens ?? 4096,
+      temperature: params.temperature ?? 0.4,
+      stream: true,
+      stream_options: { include_usage: true },
+    }),
+  });
+
+  if (!res.ok || !res.body) {
+    const text = await res.text().catch(() => "");
+    throw {
+      status: res.status,
+      message: text || `Chat stream failed (${res.status})`,
+    } satisfies VeniceError;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split("\n");
+    buf = lines.pop() ?? "";
+    for (const line of lines) {
+      const t = line.trim();
+      if (!t.startsWith("data:")) continue;
+      const data = t.slice(5).trim();
+      if (data === "[DONE]") return;
+      try {
+        const json = JSON.parse(data) as {
+          choices?: Array<{
+            delta?: { content?: string };
+            finish_reason?: string;
+          }>;
+          usage?: ChatUsage;
+        };
+        const delta = json.choices?.[0]?.delta?.content;
+        const fr = json.choices?.[0]?.finish_reason;
+        if (delta) yield { delta };
+        if (fr) yield { finishReason: fr };
+        if (json.usage) yield { usage: json.usage };
+      } catch {
+        /* skip malformed SSE line */
+      }
+    }
+  }
+}

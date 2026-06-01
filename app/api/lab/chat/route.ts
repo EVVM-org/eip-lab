@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  chatCompletion,
+  streamChatCompletion,
   type ChatMessage,
+  type ChatUsage,
   type VeniceError,
 } from "@/lib/venice";
 import { systemPromptFor, type LabPhase } from "@/lib/labPrompts";
@@ -79,44 +80,69 @@ export async function POST(req: NextRequest) {
     ...turns.filter((m) => m.role === "user" || m.role === "assistant"),
   ];
 
-  try {
-    // Contracts phase emits multiple full files — give it real room,
-    // but never exceed the model's own max-completion limit.
-    const desired = phase === "contracts" ? 32000 : 4096;
-    const cap = body.maxCompletionTokens && body.maxCompletionTokens > 0
+  // Contracts phase emits multiple full files — give it real room,
+  // but never exceed the model's own max-completion limit.
+  const desired = phase === "contracts" ? 32000 : 4096;
+  const cap =
+    body.maxCompletionTokens && body.maxCompletionTokens > 0
       ? body.maxCompletionTokens
       : desired;
-    const maxTokens = Math.min(desired, cap);
+  const maxTokens = Math.min(desired, cap);
 
-    const result = await chatCompletion(body.apiKey, {
-      model: body.model,
-      messages,
-      maxTokens,
-      temperature: phase === "contracts" ? 0.2 : 0.4,
-      stripThinking: body.stripThinking ?? true,
-    }, provider.baseUrl);
+  const apiKey = body.apiKey;
+  const model = body.model;
+  const stripThinking = body.stripThinking ?? true;
+  const baseUrl = provider.baseUrl;
+  const providerId = provider.id;
 
-    // Research telemetry: counts only. No key, no content.
-    if (result.usage) {
-      console.log(
-        `[lab/chat] provider=${provider.id} model=${result.model} phase=${phase} ` +
-          `prompt_tokens=${result.usage.prompt_tokens} ` +
-          `completion_tokens=${result.usage.completion_tokens} ` +
-          `total_tokens=${result.usage.total_tokens}`,
-      );
-    }
+  // Stream NDJSON: one JSON object per line.
+  //   {"delta":"..."}                  incremental text
+  //   {"usage":{...},"finishReason":"stop","truncated":false}  final
+  //   {"error":"..."}                  failure
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (obj: unknown) =>
+        controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
+      let usage: ChatUsage | null = null;
+      let finishReason: string | null = null;
+      try {
+        for await (const ev of streamChatCompletion(
+          apiKey,
+          { model, messages, maxTokens, temperature: phase === "contracts" ? 0.2 : 0.4, stripThinking },
+          baseUrl,
+        )) {
+          if (ev.delta) send({ delta: ev.delta });
+          if (ev.usage) usage = ev.usage;
+          if (ev.finishReason) finishReason = ev.finishReason;
+        }
+        if (usage) {
+          // Research telemetry: counts only. No key, no content.
+          console.log(
+            `[lab/chat] provider=${providerId} model=${model} phase=${phase} ` +
+              `prompt_tokens=${usage.prompt_tokens} ` +
+              `completion_tokens=${usage.completion_tokens} ` +
+              `total_tokens=${usage.total_tokens}`,
+          );
+        }
+        send({
+          usage,
+          finishReason,
+          truncated: finishReason === "length",
+        });
+      } catch (err) {
+        const e = err as VeniceError;
+        send({ error: e.message ?? "chat failed" });
+      } finally {
+        controller.close();
+      }
+    },
+  });
 
-    return NextResponse.json({
-      content: result.content,
-      model: result.model,
-      usage: result.usage,
-      truncated: result.finishReason === "length",
-    });
-  } catch (err) {
-    const e = err as VeniceError;
-    return NextResponse.json(
-      { error: e.message ?? "chat failed" },
-      { status: e.status && e.status >= 400 ? e.status : 502 },
-    );
-  }
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "application/x-ndjson; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+    },
+  });
 }

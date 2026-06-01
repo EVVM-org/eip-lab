@@ -257,54 +257,85 @@ export default function LabApp() {
         setBusy(false);
         return;
       }
-
-      // Read as text first so a non-JSON response (timeout page,
-      // gateway error) doesn't crash the parser.
-      const text = await res.text();
-      let json: {
-        content?: string;
-        usage?: ChatUsage | null;
-        truncated?: boolean;
-        error?: string;
-      } | null = null;
-      try {
-        json = text ? JSON.parse(text) : null;
-      } catch {
-        json = null;
-      }
-
-      if (!res.ok || !json) {
-        const timedOut =
-          res.status === 504 ||
-          /timeout|timed out|FUNCTION_INVOCATION_TIMEOUT/i.test(text);
-        setError(
-          json?.error ??
-            (timedOut
-              ? "The generation took too long and the server timed out. Try a smaller/faster model, or click “continue” to resume in chunks."
-              : `Request failed (${res.status}). ${text.slice(0, 140)}`),
-        );
+      if (!res.ok || !res.body) {
+        const t = await res.text().catch(() => "");
+        setError(`Request failed (${res.status}). ${t.slice(0, 140)}`);
         setBusy(false);
         return;
       }
-      if (json.error) {
-        setError(json.error);
-        setBusy(false);
-        return;
-      }
-      const assistant: ChatMessage = {
-        role: "assistant",
-        content: json.content ?? "",
+
+      // Consume the NDJSON stream: live deltas, then a final
+      // usage/finishReason line. Render is throttled so thousands of
+      // deltas don't thrash React.
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      let acc = "";
+      let usage: ChatUsage | null = null;
+      let finishReason: string | null = null;
+      let streamError: string | null = null;
+      let lastPaint = 0;
+
+      const paint = (force = false) => {
+        const now = Date.now();
+        if (force || now - lastPaint > 60) {
+          lastPaint = now;
+          setMessages([
+            ...nextMessages,
+            { role: "assistant", content: acc },
+          ]);
+        }
       };
-      setMessages([...nextMessages, assistant]);
 
-      const usage = json.usage as ChatUsage | null;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split("\n");
+        buf = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          let ev: {
+            delta?: string;
+            usage?: ChatUsage | null;
+            finishReason?: string | null;
+            truncated?: boolean;
+            error?: string;
+          };
+          try {
+            ev = JSON.parse(line);
+          } catch {
+            continue;
+          }
+          if (ev.error) {
+            streamError = ev.error;
+            continue;
+          }
+          if (ev.delta) {
+            acc += ev.delta;
+            paint();
+          }
+          if (ev.usage) usage = ev.usage;
+          if (ev.finishReason !== undefined) finishReason = ev.finishReason;
+        }
+      }
+      paint(true);
+
+      if (streamError && !acc) {
+        setError(streamError);
+        setBusy(false);
+        return;
+      }
+      if (streamError) {
+        setError(`${streamError} (partial output kept)`);
+      }
+
       if (usage) {
         setTokens((t) => ({
-          prompt: t.prompt + (usage.prompt_tokens ?? 0),
-          completion: t.completion + (usage.completion_tokens ?? 0),
-          total: t.total + (usage.total_tokens ?? 0),
+          prompt: t.prompt + (usage!.prompt_tokens ?? 0),
+          completion: t.completion + (usage!.completion_tokens ?? 0),
+          total: t.total + (usage!.total_tokens ?? 0),
         }));
-        // Live USD using the selected model's per-Mtok pricing.
         const inUsd = selectedModel?.inputUsdPerMtok;
         const outUsd = selectedModel?.outputUsdPerMtok;
         if (inUsd != null && outUsd != null) {
@@ -315,12 +346,10 @@ export default function LabApp() {
         }
       }
 
-      setTruncated(Boolean(json.truncated));
+      setTruncated(finishReason === "length");
 
       if (toPhase === "contracts") {
-        // Accumulate across continuations so multi-part generations
-        // parse into complete files.
-        const raw = (opts?.append ? contractsRaw : "") + assistant.content;
+        const raw = (opts?.append ? contractsRaw : "") + acc;
         setContractsRaw(raw);
         setFiles(parseLabFiles(raw));
       }
