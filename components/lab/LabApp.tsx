@@ -802,7 +802,17 @@ License: EVVM Noncommercial License v1.0
                   </PixelButton>
                 )}
 
-                <FollowUp onSend={(text) => send(phase === "upload" ? "summarize" : phase, text)} disabled={busy} />
+                <FollowUp
+                  onSend={(text) => {
+                    const p = phase === "upload" ? "summarize" : phase;
+                    // During the file-generating phases, a follow-up
+                    // ("keep going", a correction) must ADD to the
+                    // existing files, not clobber them.
+                    const append = p === "contracts" || p === "review";
+                    send(p, text, append ? { append: true } : undefined);
+                  }}
+                  disabled={busy}
+                />
               </div>
             )}
           </div>

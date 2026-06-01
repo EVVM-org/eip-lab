@@ -121,9 +121,16 @@ You and the user agree on what the EIP is. Now decide HOW it maps
 onto the EVVM stack, working through the technical decisions together
 as a Q&A. Cover:
 
-- Which implementation shape (A / B / C) and WHY. If the EIP is too
-  large or cross-cutting (more than ~5 distinct mocks needed),
-  recommend decomposing into sub-experiments instead of one.
+- Which implementation shape (A / B / C) and WHY. STRONGLY PREFER
+  Shape B (one new service extending EvvmService) — it's additive and
+  one file. Choose Shape A (modify Core) ONLY when the EIP changes an
+  EXISTING Core invariant (nonce, payment, or balance semantics).
+  An additive system like a shielded pool, a new token standard, or a
+  new auth scheme is Shape B even if it's large — it does not belong
+  inside Core, and choosing A forces you to recreate a 1300-line file
+  you will get wrong. If the EIP is too large or cross-cutting (more
+  than ~5 distinct mocks needed), recommend decomposing into
+  sub-experiments instead of one.
 - The dependency survey: for each required or implicit dependency,
   state vendor / mock / simulate / defer and the reason + limitation.
 - Which exact EVVM contracts get modified or added, and the shape of
@@ -157,11 +164,26 @@ that violates any of these is a failure:
 - Every identifier you use must be declared/imported. If you reference
   an interface (IERC20, IAuthVerifier), define it in the file or a
   sibling file you also output.
+- Interfaces, structs, libraries, and enums are declared at FILE
+  scope (top level), NEVER inside a function body. Solidity forbids
+  defining an interface inside a function.
+- A 'constant' MUST be initialized at its declaration with a literal.
+  For a value computed in the constructor (e.g. a keccak-derived
+  domain separator), declare it 'immutable', never 'constant'.
 - Use the EVVM Core signatures given above EXACTLY. EvvmService
   constructor is (address core, address staking).
 - Files in dependency order: interfaces and libraries first, then the
   contracts that use them.
 - Keep each file COMPLETE — never elide a function body with "...".
+
+DO NOT RECREATE THE EVVM STACK. Core.sol, Staking.sol, Estimator.sol,
+NameService.sol, Treasury.sol, P2PSwap.sol, and library/EvvmService.sol
+ALREADY EXIST in scaffold-evvm. Never output empty or placeholder
+versions of them. Never stub the whole stack. Only output files that
+are NEW (your services/mocks/interfaces) or, for Shape A, the single
+modified core contract — and for that one, show ONLY the additions
+inside // >>> EIP-<N> ADDITION <<< markers and elide unchanged regions
+with a comment, rather than regenerating the entire ~1300-line file.
 `.trim();
 
 export function contractsSystemPrompt(): string {

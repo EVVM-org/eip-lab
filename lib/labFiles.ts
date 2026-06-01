@@ -52,7 +52,7 @@ export function parseLabFiles(markdown: string): LabFile[] {
         files.push({ path, content: content.replace(/\s+$/, "") + "\n", lang: langForPath(path) });
       }
     }
-    return files;
+    return dedupeByPath(files);
   }
 
   // Strategy 2 (fallback): bare fenced blocks, named sequentially.
@@ -75,6 +75,23 @@ export function parseLabFiles(markdown: string): LabFile[] {
   }
 
   return files;
+}
+
+/**
+ * Dedupe files by path. When the same path appears more than once
+ * (e.g. a "continue"/"keep going" turn re-emits a file), keep the
+ * LONGER version — a regenerated full file beats a truncated stub,
+ * and a complete file beats a partial one. Preserves first-seen order.
+ */
+function dedupeByPath(files: LabFile[]): LabFile[] {
+  const byPath = new Map<string, LabFile>();
+  for (const f of files) {
+    const existing = byPath.get(f.path);
+    if (!existing || f.content.length >= existing.content.length) {
+      byPath.set(f.path, f);
+    }
+  }
+  return Array.from(byPath.values());
 }
 
 function sanitizePath(raw: string): string {
