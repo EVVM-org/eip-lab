@@ -14,7 +14,7 @@
  * downstream tooling. The product is: documented Solidity, end of flow.
  */
 
-export type LabPhase = "summarize" | "map" | "contracts";
+export type LabPhase = "summarize" | "map" | "contracts" | "review";
 
 const EVVM_CONTEXT = `
 You are the EVVM EIP Lab engine. EVVM (Ethereum Virtual Virtual
@@ -136,8 +136,38 @@ user to move to the CONTRACTS phase. Never promise scaffold-evvm or
 any test harness — the deliverable is documented Solidity.`;
 }
 
+const COMPILE_RULES = `
+HARD COMPILE RULES — the output MUST compile under solc 0.8.30. Code
+that violates any of these is a failure:
+
+- NO placeholder values. Never write 0x... or ... or "TODO" as a
+  value. Every constant has a real value. For domain separators and
+  derived constants, compute them inline, e.g.:
+    uint256 constant FIELD = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001;
+    uint256 constant NOTE_DOMAIN = uint256(keccak256("eip-8182.note_commitment")) % FIELD;
+- NO mappings inside memory structs, and NO function that returns or
+  takes a memory struct containing a mapping. Mappings live only in
+  storage. Don't "initialize" a struct-with-mapping in memory.
+- NO no-op or self-referential checks (never require(x == x)). Every
+  require must test something real or be omitted.
+- Mock implementations must be COMPLETE and deterministic — real
+  working code (e.g. keccak-based hashing, an admin-set verdict
+  mapping), never "incorrect logic, placeholder". A mock is a
+  simplified-but-correct stand-in, not broken code.
+- Every identifier you use must be declared/imported. If you reference
+  an interface (IERC20, IAuthVerifier), define it in the file or a
+  sibling file you also output.
+- Use the EVVM Core signatures given above EXACTLY. EvvmService
+  constructor is (address core, address staking).
+- Files in dependency order: interfaces and libraries first, then the
+  contracts that use them.
+- Keep each file COMPLETE — never elide a function body with "...".
+`.trim();
+
 export function contractsSystemPrompt(): string {
   return `${EVVM_CONTEXT}
+
+${COMPILE_RULES}
 
 PHASE 4 — EMIT CONTRACTS.
 
@@ -146,24 +176,44 @@ Produce the Solidity now. Requirements:
 - Output one fenced code block per file, each immediately preceded by
   a line of the exact form:  FILE: contracts/<Name>.sol
   (this marker lets the Lab split your output into downloadable files).
-- Every contract must be thoroughly commented: a NatSpec header
-  explaining what it is, why it exists, which EIP section it
-  satisfies, and — for any mock — an explicit "Limitations:" note
-  saying what it does NOT prove (e.g. "no cryptographic security;
-  verdict is admin-controlled").
+- Every contract has a NatSpec header: what it is, why it exists,
+  which EIP section it satisfies, and — for any mock — an explicit
+  "Limitations:" note saying what it does NOT prove.
 - License line on every file: // SPDX-License-Identifier: EVVM-NONCOMMERCIAL-1.0
-- Solidity 0.8.30.
+- pragma solidity 0.8.30; (exact, not ^0.8.30).
 - If a core contract is modified, mark additions with
-  // >>> EIP-<N> ADDITION <<<  ...  // >>> end EIP-<N> ADDITION <<<
-  and you may elide unchanged regions with a comment pointing at the
-  canonical source.
-- After the files, output one more fenced block preceded by
-  FILE: justification.md  containing a per-contract writeup
-  (what / why / EIP mapping / limitations).
+  // >>> EIP-<N> ADDITION <<< ... // >>> end EIP-<N> ADDITION <<<.
+- Keep justification.md CONCISE (a few lines per contract) so the
+  whole response fits — output it LAST, after all .sol files, as a
+  fenced block preceded by  FILE: justification.md.
 
-Do NOT write tests, deploy scripts, or an EIP draft. Do NOT promise
-scaffold-evvm or any runtime. The deliverable is documented Solidity
-plus the justification.`;
+Do NOT write tests, deploy scripts, or an EIP draft. The deliverable
+is COMPILABLE documented Solidity plus a short justification.`;
+}
+
+export function reviewSystemPrompt(): string {
+  return `${EVVM_CONTEXT}
+
+${COMPILE_RULES}
+
+PHASE 4b — REVIEW & FIX.
+
+You previously generated Solidity for this EIP on EVVM. Now act as a
+strict reviewer of YOUR OWN output. Find and FIX every instance of:
+
+1. Anything that won't compile under solc 0.8.30 — especially
+   0x... / ... placeholders, mappings inside memory structs, functions
+   taking/returning memory structs that contain mappings, undeclared
+   identifiers, missing interfaces, type mismatches.
+2. No-op or self-referential checks (require(x == x)) and any logic the
+   previous output labelled "placeholder" or "incorrect" — replace with
+   complete, correct, deterministic implementations.
+3. Wrong EVVM signatures or wrong EvvmService constructor.
+
+Output the COMPLETE corrected set of files using the same
+FILE: <path> markers (every file, full content — not a diff, not just
+the changed ones). Then a short FILE: justification.md. Do NOT just
+describe the problems — emit the fixed, compilable files.`;
 }
 
 export function systemPromptFor(phase: LabPhase): string {
@@ -174,5 +224,7 @@ export function systemPromptFor(phase: LabPhase): string {
       return mapSystemPrompt();
     case "contracts":
       return contractsSystemPrompt();
+    case "review":
+      return reviewSystemPrompt();
   }
 }

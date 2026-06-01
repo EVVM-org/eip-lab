@@ -63,9 +63,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "missing model" }, { status: 400 });
   }
   const phase: LabPhase = body.phase ?? "summarize";
-  if (!["summarize", "map", "contracts"].includes(phase)) {
+  if (!["summarize", "map", "contracts", "review"].includes(phase)) {
     return NextResponse.json({ error: "invalid phase" }, { status: 400 });
   }
+  const heavyPhase = phase === "contracts" || phase === "review";
 
   const turns = Array.isArray(body.messages) ? body.messages : [];
 
@@ -80,9 +81,9 @@ export async function POST(req: NextRequest) {
     ...turns.filter((m) => m.role === "user" || m.role === "assistant"),
   ];
 
-  // Contracts phase emits multiple full files — give it real room,
-  // but never exceed the model's own max-completion limit.
-  const desired = phase === "contracts" ? 32000 : 4096;
+  // Contracts/review phases emit multiple full files — give them real
+  // room, but never exceed the model's own max-completion limit.
+  const desired = heavyPhase ? 32000 : 4096;
   const cap =
     body.maxCompletionTokens && body.maxCompletionTokens > 0
       ? body.maxCompletionTokens
@@ -99,6 +100,10 @@ export async function POST(req: NextRequest) {
   //   {"delta":"..."}                  incremental text
   //   {"usage":{...},"finishReason":"stop","truncated":false}  final
   //   {"error":"..."}                  failure
+  // Rough token estimate for when the provider's stream omits usage
+  // (Venice streaming doesn't reliably return a usage chunk).
+  const promptChars = messages.reduce((n, m) => n + m.content.length, 0);
+
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -106,15 +111,29 @@ export async function POST(req: NextRequest) {
         controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
       let usage: ChatUsage | null = null;
       let finishReason: string | null = null;
+      let outChars = 0;
       try {
         for await (const ev of streamChatCompletion(
           apiKey,
-          { model, messages, maxTokens, temperature: phase === "contracts" ? 0.2 : 0.4, stripThinking },
+          { model, messages, maxTokens, temperature: heavyPhase ? 0.2 : 0.4, stripThinking },
           baseUrl,
         )) {
-          if (ev.delta) send({ delta: ev.delta });
+          if (ev.delta) {
+            outChars += ev.delta.length;
+            send({ delta: ev.delta });
+          }
           if (ev.usage) usage = ev.usage;
           if (ev.finishReason) finishReason = ev.finishReason;
+        }
+        // Estimate usage if the provider didn't send it (~4 chars/token).
+        let estimated = false;
+        if (!usage) {
+          estimated = true;
+          usage = {
+            prompt_tokens: Math.ceil(promptChars / 4),
+            completion_tokens: Math.ceil(outChars / 4),
+            total_tokens: Math.ceil((promptChars + outChars) / 4),
+          };
         }
         if (usage) {
           // Research telemetry: counts only. No key, no content.
@@ -122,11 +141,12 @@ export async function POST(req: NextRequest) {
             `[lab/chat] provider=${providerId} model=${model} phase=${phase} ` +
               `prompt_tokens=${usage.prompt_tokens} ` +
               `completion_tokens=${usage.completion_tokens} ` +
-              `total_tokens=${usage.total_tokens}`,
+              `total_tokens=${usage.total_tokens} estimated=${estimated}`,
           );
         }
         send({
           usage,
+          estimated,
           finishReason,
           truncated: finishReason === "length",
         });

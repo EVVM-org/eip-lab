@@ -14,7 +14,7 @@ import { parseLabFiles, type LabFile } from "@/lib/labFiles";
 import { buildZip, downloadBlob } from "@/lib/zip";
 import type { ChatMessage, ChatUsage, ModelInfo } from "@/lib/venice";
 
-type Phase = "upload" | "summarize" | "map" | "contracts";
+type Phase = "upload" | "summarize" | "map" | "contracts" | "review";
 
 const PHASES: { id: Phase; n: string; label: string }[] = [
   { id: "upload", n: "01", label: "Upload" },
@@ -227,7 +227,9 @@ export default function LabApp() {
     }
     setError(null);
     setBusy(true);
-    setPhase(toPhase);
+    // "review" is a sub-step of phase 4 — keep the visible stepper on
+    // contracts so the progress UI doesn't break.
+    if (toPhase !== "review") setPhase(toPhase);
 
     const nextMessages: ChatMessage[] = [
       ...messages,
@@ -348,7 +350,8 @@ export default function LabApp() {
 
       setTruncated(finishReason === "length");
 
-      if (toPhase === "contracts") {
+      if (toPhase === "contracts" || toPhase === "review") {
+        // review replaces the whole set with the corrected files.
         const raw = (opts?.append ? contractsRaw : "") + acc;
         setContractsRaw(raw);
         setFiles(parseLabFiles(raw));
@@ -821,7 +824,21 @@ License: EVVM Noncommercial License v1.0
               <span className="font-[family-name:var(--font-mono)] text-sm text-[var(--color-text)]">
                 {files.length} file{files.length === 1 ? "" : "s"} generated
               </span>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
+                <PixelButton
+                  variant="secondary"
+                  size="sm"
+                  onClick={() =>
+                    send(
+                      "review",
+                      "Review your generated Solidity above as a strict compiler + auditor. Fix every compile error (especially 0x... / ... placeholders, mappings inside memory structs, undeclared identifiers), every no-op or self-referential check, and every spot you left as 'placeholder' or 'incorrect'. Output the COMPLETE corrected set of files with FILE: markers, then a short FILE: justification.md.",
+                      { append: false },
+                    )
+                  }
+                  disabled={busy}
+                >
+                  ⟳ review &amp; fix
+                </PixelButton>
                 <PixelButton variant="phosphor" size="sm" onClick={downloadAll}>
                   ↓ download .zip
                 </PixelButton>
