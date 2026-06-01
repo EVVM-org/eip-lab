@@ -54,10 +54,39 @@ system contract), choose one strategy per dependency and state it:
   - mock     (admin-controlled stub matching the interface)
   - simulate (deploy canonical bytecode at a fixed address)
   - defer    (out of contract scope — e.g. mempool/node policy)
+
+EVVM Core public surface (use these EXACT signatures; do not invent
+function names — Solidity 0.8.30):
+  function validateAndConsumeNonce(address user, address senderExecutor,
+      bytes32 dataHash, address originExecutor, uint256 nonce,
+      bool isAsyncExec, bytes calldata signature) external;
+  function pay(...) / batchPay(...) / dispersePay(...) external;
+  function caPay(address to, address token, uint256 amount) external;
+  function disperseCaPay(...) external;
+  function getNextCurrentSyncNonce(address user) external view returns (uint256);
+  function getIfUsedAsyncNonce(address user, uint256 nonce) external view returns (bool);
+  function getBalance(address user, address token) external view returns (uint256);
+  function getPrincipalTokenAddress() external view returns (address);
+  function getEvvmID() external view returns (uint256);
+  function isAddressStaker(address user) external view returns (bool);
+New services extend EvvmService (constructor (address core, address staking)).
+`.trim();
+
+const GROUNDING_RULE = `
+CRITICAL GROUNDING RULE:
+Base everything ONLY on the EIP material provided in this conversation
+(pasted text and/or fetched link content below). Do NOT answer from
+training memory — EIP numbers are reused and reassigned, and your
+memory of a given EIP number is very likely WRONG. If the provided
+material is missing, empty, or just a bare URL with no spec text, you
+MUST say "I don't have the EIP content — please paste the spec text"
+and ask for it. Never guess what an EIP is from its number alone.
 `.trim();
 
 export function summarizeSystemPrompt(): string {
   return `${EVVM_CONTEXT}
+
+${GROUNDING_RULE}
 
 PHASE 2 — READ & AGREE.
 
@@ -83,6 +112,8 @@ to move to the MAP phase.`;
 
 export function mapSystemPrompt(): string {
   return `${EVVM_CONTEXT}
+
+${GROUNDING_RULE}
 
 PHASE 3 — MAP THE SURFACE.
 

@@ -157,10 +157,69 @@ export default function LabApp() {
     }
   }
 
+  /**
+   * Launch: auto-fetch every fetchable link, assemble the real EIP
+   * context, refuse to proceed if there's no actual spec content (so
+   * the model can't hallucinate from a bare URL), then start phase 2.
+   */
+  async function launch() {
+    setError(null);
+    if (!model) {
+      setError("Pick a model first.");
+      return;
+    }
+
+    setBusy(true);
+    // Fetch any allowlisted links not already fetched.
+    const fetched: Record<string, string> = { ...fetchedContext };
+    for (const l of links) {
+      if (l.kind === "other" || fetched[l.url]) continue;
+      try {
+        const res = await fetch("/api/eip/fetch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: l.url }),
+        });
+        const json = await res.json();
+        if (json.text) fetched[l.url] = json.text;
+      } catch {
+        /* leave it; we validate content below */
+      }
+    }
+    setFetchedContext(fetched);
+
+    // Assemble context locally (state updates are async).
+    const fetchedStr = Object.entries(fetched)
+      .map(([url, text]) => `# Fetched from ${url}\n\n${text}`)
+      .join("\n\n");
+    const ctx = [eipText.trim(), fetchedStr].filter(Boolean).join("\n\n");
+
+    // Reject bare-URL / too-thin input — this is what caused the
+    // model to hallucinate the wrong EIP before.
+    const contentLen = ctx.replace(/https?:\/\/\S+/g, "").trim().length;
+    if (contentLen < 400) {
+      setBusy(false);
+      setError(
+        "No EIP spec content yet. Paste the EIP text, or use a fetchable link " +
+          "(eips.ethereum.org / raw github / ethereum-magicians / ethresear.ch). " +
+          "I won't guess an EIP from a bare URL.",
+      );
+      return;
+    }
+
+    // busy is already true; send() will keep it managed.
+    setBusy(false);
+    await send(
+      "summarize",
+      "Read the EIP material I provided and tell me exactly what it is, in as much depth as it warrants. Base it ONLY on the provided material. Confirm the intent with me before we map it onto EVVM.",
+      { contextOverride: ctx },
+    );
+  }
+
   async function send(
     toPhase: Phase,
     userContent: string,
-    opts?: { append?: boolean },
+    opts?: { append?: boolean; contextOverride?: string },
   ) {
     if (!model) {
       setError("Pick a model first.");
@@ -186,7 +245,7 @@ export default function LabApp() {
           model,
           phase: toPhase,
           messages: nextMessages,
-          eipContext,
+          eipContext: opts?.contextOverride ?? eipContext,
           maxCompletionTokens: selectedModel?.maxCompletionTokens,
           stripThinking,
         }),
@@ -566,22 +625,22 @@ License: EVVM Noncommercial License v1.0
 
               <PixelButton
                 variant="primary"
-                onClick={() =>
-                  send(
-                    "summarize",
-                    "Read the EIP I provided and tell me what it is, in as much depth as it warrants. Confirm the intent with me before we map it onto EVVM.",
-                  )
-                }
+                onClick={launch}
                 disabled={!canStart || busy}
                 className="w-full"
               >
                 {busy && phase === "upload"
-                  ? "starting…"
+                  ? "fetching EIP + starting…"
                   : "↳ Launch EIP Lab"}
               </PixelButton>
-              {!canStart && (
-                <p className="font-[family-name:var(--font-mono)] text-[9px] text-[var(--color-text-dim)]">
-                  need: api key + model + some EIP material.
+              <p className="font-[family-name:var(--font-mono)] text-[9px] text-[var(--color-text-dim)]">
+                {!canStart
+                  ? "need: api key + model + EIP text or a fetchable link."
+                  : "links are fetched automatically on launch so the model reads the real spec."}
+              </p>
+              {error && phase === "upload" && (
+                <p className="border-2 border-[var(--color-vp-pink)] bg-[rgba(255,0,110,0.08)] px-2 py-1.5 font-[family-name:var(--font-mono)] text-[10px] text-[var(--color-vp-pink)]">
+                  {error}
                 </p>
               )}
             </div>
