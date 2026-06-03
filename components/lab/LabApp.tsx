@@ -243,7 +243,7 @@ export default function LabApp() {
     // keep partial output on later drops, hard-timeout hung streams.
     const MAX_ATTEMPTS = 3;
     const KEEP_PARTIAL_CHARS = 400; // drop after this much = keep, don't retry
-    const STREAM_TIMEOUT_MS = 240_000;
+    const IDLE_TIMEOUT_MS = 45_000; // no token for this long = stalled stream
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
     let acc = "";
@@ -282,11 +282,23 @@ export default function LabApp() {
         finishReason = null;
         softError = null;
 
+        // Idle watchdog: abort if no token arrives for IDLE_TIMEOUT_MS.
+        // This catches a stream that goes quiet without erroring (the
+        // "stuck on thinking…" case) as well as a hard drop.
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), STREAM_TIMEOUT_MS);
+        let idleTimer: ReturnType<typeof setTimeout> | null = null;
+        const armIdle = () => {
+          if (idleTimer) clearTimeout(idleTimer);
+          idleTimer = setTimeout(() => controller.abort(), IDLE_TIMEOUT_MS);
+        };
+        const clearIdle = () => {
+          if (idleTimer) clearTimeout(idleTimer);
+          idleTimer = null;
+        };
         let dropped = false;
 
         try {
+          armIdle(); // start the clock for the first byte
           const res = await fetch("/api/lab/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -295,12 +307,12 @@ export default function LabApp() {
           });
 
           if (res.status === 429) {
-            clearTimeout(timer);
+            clearIdle();
             setError("Rate limited by the provider — wait a few seconds and retry.");
             return;
           }
           if (!res.ok || !res.body) {
-            clearTimeout(timer);
+            clearIdle();
             const t = await res.text().catch(() => "");
             if (attempt < MAX_ATTEMPTS) {
               setError(`server error ${res.status} — retrying (${attempt}/${MAX_ATTEMPTS})…`);
@@ -318,6 +330,7 @@ export default function LabApp() {
             for (;;) {
               const { done, value } = await reader.read();
               if (done) break;
+              armIdle(); // got bytes — reset the idle watchdog
               buf += decoder.decode(value, { stream: true });
               const lines = buf.split("\n");
               buf = lines.pop() ?? "";
@@ -348,10 +361,10 @@ export default function LabApp() {
               }
             }
           } catch {
-            // Mid-stream connection drop / abort.
+            // Mid-stream connection drop, abort, or idle-timeout.
             dropped = true;
           } finally {
-            clearTimeout(timer);
+            clearIdle();
           }
           paint(true);
 
@@ -375,7 +388,7 @@ export default function LabApp() {
             return;
           }
         } catch (fetchErr) {
-          clearTimeout(timer);
+          clearIdle();
           // fetch rejected (abort/timeout/offline) before producing a body.
           if (attempt < MAX_ATTEMPTS) {
             setError(`network error — retrying (${attempt}/${MAX_ATTEMPTS})…`);
