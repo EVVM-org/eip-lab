@@ -30,10 +30,29 @@ sources.
 
 ## Runs index
 
-| Date | EIP | Provider | Model | Env | Prompt tok | Compl tok | Total tok | Est. USD | Files | Completed | Shape |
-|------|-----|----------|-------|-----|-----------:|----------:|----------:|---------:|------:|-----------|-------|
-| 2026-06-03 | 8182 | Venice | qwen3-coder-480b-a35b-instruct-turbo | local | 161,406 | 11,388 | 172,794 | $0.0736 | 5 | yes | B |
-| 2026-06-03 | 8182 | Venice | qwen3-coder-480b-a35b-instruct-turbo | vercel | 160,608 | 9,233 | 169,841 | $0.0701 | 6 | yes | B |
+| Date | EIP | Provider | Model | Env | Prompt tok | Compl tok | Total tok | Est. USD | Files | Completed | Compiles | Shape |
+|------|-----|----------|-------|-----|-----------:|----------:|----------:|---------:|------:|-----------|----------|-------|
+| 2026-06-03 | 8182 | Venice | qwen3-coder-480b-a35b-instruct-turbo | local | 161,406 | 11,388 | 172,794 | $0.0736 | 5 | yes | no¹ | B |
+| 2026-06-03 | 8182 | Venice | qwen3-coder-480b-a35b-instruct-turbo | vercel | 160,608 | 9,233 | 169,841 | $0.0701 | 6 | yes | no¹ | B |
+| 2026-06-03 | 8182 | Venice | deepseek-v4-pro | vercel | 237,178 | 11,962 | 249,140 | $0.4557 | 7 | yes² | no³ | B |
+
+¹ qwen3-coder: residual issues — storage-array slice `history[1:]`,
+`abi.encodePacked(mapping)`, library-constant visibility. Close to
+compilable; a few mechanical fixes.
+² deepseek reached a complete justification.md but used two "continue"
+turns; the contracts phase truncated twice.
+³ deepseek: blocked by an interface declared inside the contract, two
+spurious `override`s, and content dropped at the truncate→continue
+boundaries (welds). Best fidelity + cleanest mocks of any run; see the
+run file.
+
+> Two earlier deepseek-v4-pro attempts on this EIP are NOT logged as data
+> rows: both failed in ways since fixed in the product, not in the model.
+> Run A spiralled into "// Wait, I'm confusing myself…" comments and
+> truncated. Run B fabricated the Poseidon2 round constants + empty-node
+> ladder (invented hex labelled "canonical") and emitted malformed hex.
+> The prompt fixes (`a600e96` no-narration, `c2703ef` anti-fabrication)
+> closed both; the logged row above is the first clean-behaviour run.
 
 > Add a row per new run. Keep one transcript file per run under `runs/`.
 
@@ -61,6 +80,50 @@ sources.
   for root calc (invalid), and library-constant visibility quirks. A
   real `solc` feedback loop would catch these; out of scope unless the
   bar moves to "must compile".
+
+- **Reasoning models reach for authentic-looking complexity; the
+  artifact gets more elaborate AND more confidently wrong.** Across three
+  deepseek-v4-pro runs the failures escalated in exactly that direction:
+  (1) spiral-debugging the incremental-Merkle bit math in code comments,
+  (2) interleaving `<think>` asides mid-code (welds when stripped),
+  (3) fabricating Poseidon round constants + empty-node ladders as
+  "canonical" data. qwen3-coder (non-reasoning) did none of this — it
+  wrote the boring keccak mock the first time. Reasoning capability
+  correlated with more elaborate, more dangerous output on
+  under-specified cryptographic detail. Each was closed by a prompt rule;
+  the model then probed the next failure mode.
+
+- **Prompt-fix timeline (for reproducibility):** `a600e96` banned
+  thinking-out-loud in code + added budget discipline; `c2703ef` forbade
+  fabricated cryptographic constants and made the keccak mock the
+  parameter-free default. Runs before each fix are described in the
+  deepseek run file but not logged as data rows (product bugs, not model
+  behaviour).
+
+- **Cost scales with reasoning + continuations, not just model price.**
+  deepseek's logged run cost ~6.5× the qwen3-coder runs ($0.456 vs ~$0.07)
+  for the same EIP: higher per-Mtok price, plus ~237k prompt tokens
+  because two "continue" turns re-sent the growing history. The single
+  biggest cost (and quality) lever for large EIPs is finishing in ONE
+  turn — continuations re-bill the whole transcript and also cause the
+  weld defects below.
+
+- **The dominant remaining defect is the continuation mechanism, not the
+  model.** When the contracts phase exceeds a model's max-completion
+  budget, the user continues, the model resumes mid-file at an
+  approximate point, and the client appends by raw string concat —
+  welding fragments and dropping content (deepseek's missing `deposit()`
+  body, `_computeNoteRoot()` signature, `getAuthPolicyEntry()`). Next fix
+  is harness-side: make continuation file-aware (re-emit from the current
+  `FILE:` marker, stitch whole files via dedupe-keep-longer) or push
+  concision so large EIPs finish single-shot.
+
+- **"Compiles" is now tracked** as a column. Current product goal is
+  documented-readable .sol, but compile-readiness is the strongest single
+  quality axis across models, so we record yes/no + the blocking reason.
+  No run compiles yet; all are "close" in different ways (qwen3-coder:
+  a few mechanical Solidity-ism fixes; deepseek: in-contract interface +
+  spurious `override` + continue welds).
 
 ## File naming
 
