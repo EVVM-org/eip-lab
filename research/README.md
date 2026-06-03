@@ -35,6 +35,7 @@ sources.
 | 2026-06-03 | 8182 | Venice | qwen3-coder-480b-a35b-instruct-turbo | local | 161,406 | 11,388 | 172,794 | $0.0736 | 5 | yes | no¹ | B |
 | 2026-06-03 | 8182 | Venice | qwen3-coder-480b-a35b-instruct-turbo | vercel | 160,608 | 9,233 | 169,841 | $0.0701 | 6 | yes | no¹ | B |
 | 2026-06-03 | 8182 | Venice | deepseek-v4-pro | vercel | 237,178 | 11,962 | 249,140 | $0.4557 | 7 | yes² | no³ | B |
+| 2026-06-03 | 8182 | OpenAI | gpt-5.5 | vercel | 167,548 | 24,753 | 192,301 | $1.5803 | 8 | yes⁴ | no⁵ | B |
 
 ¹ qwen3-coder: residual issues — storage-array slice `history[1:]`,
 `abi.encodePacked(mapping)`, library-constant visibility. Close to
@@ -45,6 +46,11 @@ turns; the contracts phase truncated twice.
 spurious `override`s, and content dropped at the truncate→continue
 boundaries (welds). Best fidelity + cleanest mocks of any run; see the
 run file.
+⁴ gpt-5.5: single-shot, no "continue" turns; OpenAI returns a usage chunk
+so tokens/cost are exact, not estimated.
+⁵ gpt-5.5: closest to compilable of any run — blocked only by a single
+dropped `{` in one mock's constructor. Correct frontier Merkle, no
+fabrication, no welds dropping functions. See the run file.
 
 > Two earlier deepseek-v4-pro attempts on this EIP are NOT logged as data
 > rows: both failed in ways since fixed in the product, not in the model.
@@ -117,6 +123,29 @@ run file.
   is harness-side: make continuation file-aware (re-emit from the current
   `FILE:` marker, stitch whole files via dedupe-keep-longer) or push
   concision so large EIPs finish single-shot.
+
+- **Single-shot completion is the strongest quality predictor so far.**
+  gpt-5.5 (OpenAI) finished all 8 files in ONE turn (24.7k completion
+  tokens) and produced the closest-to-compilable artifact in the dataset —
+  one dropped `{` from clean. The deepseek run needed two "continue" turns
+  and the welds at those boundaries gutted whole functions. The model that
+  didn't have to continue won on correctness. This is the same lesson the
+  continuation-mechanism note draws, from the opposite direction: the fix
+  that matters most is making large EIPs finish in one turn (bigger
+  single-shot budget / concision) or making continuation file-aware.
+- **Quality scaled with price on this EIP.** Approx cost-vs-distance-to-
+  compile: qwen3-coder ~$0.07 (a few Solidity-isms) < deepseek $0.46
+  (several edits + lost code) < gpt-5.5 $1.58 (one character). Not a law —
+  one EIP, three models — but a clean monotonic trend worth reporting.
+- **The weld class has shrunk from "whole functions" to "one character."**
+  Across models the mid-stream/`<think>`-adjacent splice that drops content
+  went from deepseek losing entire function bodies to gpt-5.5 dropping a
+  single `{`. A trivial post-generation brace/lint pass — or the file-aware
+  continuation fix — would likely tip the best runs into compiling.
+- **OpenAI gives exact usage; Venice is estimated.** OpenAI's stream
+  returns a usage chunk, so OpenAI rows are measured. Venice streaming
+  omits usage, so those completion counts are estimated (~4 chars/token).
+  Treat the OpenAI row as the calibration point when comparing costs.
 
 - **"Compiles" is now tracked** as a column. Current product goal is
   documented-readable .sol, but compile-readiness is the strongest single
