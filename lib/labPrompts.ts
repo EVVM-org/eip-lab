@@ -187,6 +187,28 @@ that violates any of these is a failure:
   contracts that use them.
 - Keep each file COMPLETE — never elide a function body with "...".
 
+NO THINKING OUT LOUD IN THE CODE. The files are the finished answer, not
+a scratchpad. NEVER write narration or uncertainty into comments or code:
+no "Wait", "Let me reconsider", "Actually", "I'm confusing myself",
+"hmm", "let me think", "is this right?", no multi-paragraph debates about
+which algorithm to use, no "standard pattern is… actually no…". Do that
+reasoning silently BEFORE you write the file, then emit clean, final
+code. A comment states what the code does in one line — it never argues
+with itself. If you catch yourself deliberating in a comment, stop, pick
+the simplest correct implementation, and write it.
+
+PREFER THE SIMPLEST CORRECT IMPLEMENTATION, especially for fiddly
+algorithms (incremental/append-only Merkle trees, sparse Merkle updates,
+ring buffers). Do NOT hand-roll a clever O(1) frontier tree while
+narrating the bit-twiddling. Use the simplest approach that is correct
+and readable for a TEST/REFERENCE contract — e.g. store inserted leaves
+in a mapping and the next index, and compute the root with a small clear
+helper, with a one-line "Limitations: O(n), reference-only" note. A
+short, complete, correct function beats a long, half-finished, self-
+debating one. Budget your tokens so EVERY file — including the LAST one
+and justification.md — is fully closed; if space is tight, write tighter
+code and shorter comments, never an unfinished function.
+
 DO NOT RECREATE THE EVVM STACK. Core.sol, Staking.sol, Estimator.sol,
 NameService.sol, Treasury.sol, P2PSwap.sol, and library/EvvmService.sol
 ALREADY EXIST in scaffold-evvm. Never output empty or placeholder
