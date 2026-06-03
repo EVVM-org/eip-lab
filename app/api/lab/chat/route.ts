@@ -163,6 +163,10 @@ export async function POST(req: NextRequest) {
     headers: {
       "Content-Type": "application/x-ndjson; charset=utf-8",
       "Cache-Control": "no-cache, no-transform",
+      // Disable proxy/CDN buffering so deltas flush immediately instead
+      // of being held back (which can look like a stall or trip an idle
+      // timeout mid-stream).
+      "X-Accel-Buffering": "no",
     },
   });
 }

@@ -237,100 +237,166 @@ export default function LabApp() {
     ];
     setMessages(nextMessages);
 
+    // Resilient streaming consumer. A mid-stream connection drop (a
+    // network blip, or the provider/host killing a long-lived stream)
+    // used to lose the whole turn. Now: retry transient early drops,
+    // keep partial output on later drops, hard-timeout hung streams.
+    const MAX_ATTEMPTS = 3;
+    const KEEP_PARTIAL_CHARS = 400; // drop after this much = keep, don't retry
+    const STREAM_TIMEOUT_MS = 240_000;
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+    let acc = "";
+    let usage: ChatUsage | null = null;
+    let finishReason: string | null = null;
+    let softError: string | null = null;
+    let lastPaint = 0;
+    const paint = (force = false) => {
+      const now = Date.now();
+      if (force || now - lastPaint > 60) {
+        lastPaint = now;
+        setMessages([...nextMessages, { role: "assistant", content: acc }]);
+      }
+    };
+
+    const body = JSON.stringify({
+      providerId,
+      apiKey,
+      model,
+      phase: toPhase,
+      messages: nextMessages,
+      eipContext: opts?.contextOverride ?? eipContext,
+      maxCompletionTokens: selectedModel?.maxCompletionTokens,
+      stripThinking,
+    });
+
     try {
-      const res = await fetch("/api/lab/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          providerId,
-          apiKey,
-          model,
-          phase: toPhase,
-          messages: nextMessages,
-          eipContext: opts?.contextOverride ?? eipContext,
-          maxCompletionTokens: selectedModel?.maxCompletionTokens,
-          stripThinking,
-        }),
-      });
-      if (res.status === 429) {
-        setError(
-          "Rate limited by the provider — wait a few seconds and retry.",
-        );
-        setBusy(false);
-        return;
-      }
-      if (!res.ok || !res.body) {
-        const t = await res.text().catch(() => "");
-        setError(`Request failed (${res.status}). ${t.slice(0, 140)}`);
-        setBusy(false);
-        return;
-      }
+      let attempt = 0;
+      let settled = false;
 
-      // Consume the NDJSON stream: live deltas, then a final
-      // usage/finishReason line. Render is throttled so thousands of
-      // deltas don't thrash React.
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = "";
-      let acc = "";
-      let usage: ChatUsage | null = null;
-      let finishReason: string | null = null;
-      let streamError: string | null = null;
-      let lastPaint = 0;
+      while (attempt < MAX_ATTEMPTS && !settled) {
+        attempt++;
+        // Fresh accumulation each attempt; a retry repaints from scratch.
+        acc = "";
+        usage = null;
+        finishReason = null;
+        softError = null;
 
-      const paint = (force = false) => {
-        const now = Date.now();
-        if (force || now - lastPaint > 60) {
-          lastPaint = now;
-          setMessages([
-            ...nextMessages,
-            { role: "assistant", content: acc },
-          ]);
-        }
-      };
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), STREAM_TIMEOUT_MS);
+        let dropped = false;
 
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        const lines = buf.split("\n");
-        buf = lines.pop() ?? "";
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          let ev: {
-            delta?: string;
-            usage?: ChatUsage | null;
-            finishReason?: string | null;
-            truncated?: boolean;
-            error?: string;
-          };
+        try {
+          const res = await fetch("/api/lab/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body,
+            signal: controller.signal,
+          });
+
+          if (res.status === 429) {
+            clearTimeout(timer);
+            setError("Rate limited by the provider — wait a few seconds and retry.");
+            return;
+          }
+          if (!res.ok || !res.body) {
+            clearTimeout(timer);
+            const t = await res.text().catch(() => "");
+            if (attempt < MAX_ATTEMPTS) {
+              setError(`server error ${res.status} — retrying (${attempt}/${MAX_ATTEMPTS})…`);
+              await sleep(600 * attempt);
+              continue;
+            }
+            setError(`Request failed (${res.status}). ${t.slice(0, 140)}`);
+            return;
+          }
+
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let buf = "";
           try {
-            ev = JSON.parse(line);
+            for (;;) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              buf += decoder.decode(value, { stream: true });
+              const lines = buf.split("\n");
+              buf = lines.pop() ?? "";
+              for (const line of lines) {
+                if (!line.trim()) continue;
+                let ev: {
+                  delta?: string;
+                  usage?: ChatUsage | null;
+                  finishReason?: string | null;
+                  truncated?: boolean;
+                  error?: string;
+                };
+                try {
+                  ev = JSON.parse(line);
+                } catch {
+                  continue;
+                }
+                if (ev.error) {
+                  softError = ev.error;
+                  continue;
+                }
+                if (ev.delta) {
+                  acc += ev.delta;
+                  paint();
+                }
+                if (ev.usage) usage = ev.usage;
+                if (ev.finishReason !== undefined) finishReason = ev.finishReason;
+              }
+            }
           } catch {
+            // Mid-stream connection drop / abort.
+            dropped = true;
+          } finally {
+            clearTimeout(timer);
+          }
+          paint(true);
+
+          if (!dropped) {
+            settled = true; // completed cleanly (maybe with a soft {error})
+          } else if (acc.length >= KEEP_PARTIAL_CHARS) {
+            // Substantial output already streamed — keep it, let the
+            // user continue/retry the step rather than re-spend tokens.
+            softError =
+              "Stream interrupted (network) after partial output — kept what arrived. Continue the step, or retry.";
+            settled = true;
+          } else if (attempt < MAX_ATTEMPTS) {
+            setError(`network blip — retrying (${attempt}/${MAX_ATTEMPTS})…`);
+            await sleep(600 * attempt);
+            continue;
+          } else if (acc) {
+            softError = "Stream interrupted (network). Continue the step, or retry.";
+            settled = true;
+          } else {
+            setError("Network error — the stream dropped before any output. Retry the step.");
+            return;
+          }
+        } catch (fetchErr) {
+          clearTimeout(timer);
+          // fetch rejected (abort/timeout/offline) before producing a body.
+          if (attempt < MAX_ATTEMPTS) {
+            setError(`network error — retrying (${attempt}/${MAX_ATTEMPTS})…`);
+            await sleep(600 * attempt);
             continue;
           }
-          if (ev.error) {
-            streamError = ev.error;
-            continue;
-          }
-          if (ev.delta) {
-            acc += ev.delta;
-            paint();
-          }
-          if (ev.usage) usage = ev.usage;
-          if (ev.finishReason !== undefined) finishReason = ev.finishReason;
+          setError(
+            fetchErr instanceof Error
+              ? `Network error: ${fetchErr.message}. Retry the step.`
+              : "Network error. Retry the step.",
+          );
+          return;
         }
       }
-      paint(true);
 
-      if (streamError && !acc) {
-        setError(streamError);
-        setBusy(false);
+      // ── post-processing (after the attempt loop) ──
+      if (softError && !acc) {
+        setError(softError);
         return;
       }
-      if (streamError) {
-        setError(`${streamError} (partial output kept)`);
-      }
+      setError(softError); // soft warning kept if partial; null clears on success
 
       if (usage) {
         setTokens((t) => ({
@@ -351,13 +417,10 @@ export default function LabApp() {
       setTruncated(finishReason === "length");
 
       if (toPhase === "contracts" || toPhase === "review") {
-        // review replaces the whole set with the corrected files.
         const raw = (opts?.append ? contractsRaw : "") + acc;
         setContractsRaw(raw);
         setFiles(parseLabFiles(raw));
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "request failed");
     } finally {
       setBusy(false);
     }
