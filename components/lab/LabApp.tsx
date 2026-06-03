@@ -53,6 +53,14 @@ export default function LabApp() {
   const [files, setFiles] = useState<LabFile[]>([]);
   const [contractsRaw, setContractsRaw] = useState("");
   const [truncated, setTruncated] = useState(false);
+  // Live progress for the current turn: elapsed seconds, whether the
+  // model is still in its (silent) reasoning phase, and a short preview
+  // of the reasoning so "working" is visibly distinct from "stuck".
+  const [live, setLive] = useState<{
+    seconds: number;
+    reasoning: boolean;
+    preview: string;
+  } | null>(null);
 
   const transcriptRef = useRef<HTMLDivElement>(null);
 
@@ -246,6 +254,16 @@ export default function LabApp() {
     const IDLE_TIMEOUT_MS = 45_000; // no token for this long = stalled stream
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+    // Live elapsed-time ticker so a long silent reasoning window reads as
+    // "working… 47s" rather than a frozen "thinking…".
+    const startedAt = Date.now();
+    setLive({ seconds: 0, reasoning: false, preview: "" });
+    const ticker = setInterval(() => {
+      setLive((l) =>
+        l ? { ...l, seconds: Math.round((Date.now() - startedAt) / 1000) } : l,
+      );
+    }, 1000);
+
     let acc = "";
     let usage: ChatUsage | null = null;
     let finishReason: string | null = null;
@@ -338,6 +356,8 @@ export default function LabApp() {
                 if (!line.trim()) continue;
                 let ev: {
                   delta?: string;
+                  reasoning?: string;
+                  heartbeat?: number;
                   usage?: ChatUsage | null;
                   finishReason?: string | null;
                   truncated?: boolean;
@@ -352,8 +372,20 @@ export default function LabApp() {
                   softError = ev.error;
                   continue;
                 }
+                if (ev.reasoning) {
+                  // Reasoning is progress, not answer — never added to acc.
+                  const chunk = ev.reasoning;
+                  setLive((l) => ({
+                    seconds: l?.seconds ?? 0,
+                    reasoning: true,
+                    preview: ((l?.preview ?? "") + chunk).slice(-160),
+                  }));
+                  continue;
+                }
                 if (ev.delta) {
                   acc += ev.delta;
+                  // First answer token — reasoning phase is over.
+                  setLive((l) => (l ? { ...l, reasoning: false } : l));
                   paint();
                 }
                 if (ev.usage) usage = ev.usage;
@@ -435,6 +467,8 @@ export default function LabApp() {
         setFiles(parseLabFiles(raw));
       }
     } finally {
+      clearInterval(ticker);
+      setLive(null);
       setBusy(false);
     }
   }
@@ -660,7 +694,8 @@ License: EVVM Noncommercial License v1.0
                     checked={stripThinking}
                     onChange={(e) => setStripThinking(e.target.checked)}
                   />
-                  strip &lt;thinking&gt; from output (recommended)
+                  hide the model&apos;s reasoning trace (kept out of files
+                  either way)
                 </label>
               )}
             </div>
@@ -815,7 +850,28 @@ License: EVVM Noncommercial License v1.0
 
               {busy && (
                 <div className="font-[family-name:var(--font-mono)] text-sm text-[var(--color-matrix)]">
-                  <span className="cursor-blink">▊</span> thinking…
+                  <div>
+                    <span className="cursor-blink">▊</span>{" "}
+                    {live?.reasoning ? "reasoning" : "writing"}…
+                    {live?.seconds ? (
+                      <span className="text-[var(--color-text-dim)]">
+                        {" "}
+                        {live.seconds}s
+                      </span>
+                    ) : null}
+                    {live?.reasoning && (
+                      <span className="text-[var(--color-text-dim)]">
+                        {" "}
+                        — model is thinking; first output may take a minute on
+                        reasoning models
+                      </span>
+                    )}
+                  </div>
+                  {!stripThinking && live?.preview && (
+                    <pre className="mt-1 max-h-16 overflow-hidden whitespace-pre-wrap break-words text-[10px] leading-snug text-[var(--color-text-dim)] opacity-70">
+                      {live.preview}
+                    </pre>
+                  )}
                 </div>
               )}
             </div>

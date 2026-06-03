@@ -177,7 +177,10 @@ export async function chatCompletion(
 }
 
 export interface StreamEvent {
+  /** Answer content — feeds the visible output and the generated files. */
   delta?: string;
+  /** Reasoning/thinking content — shown as live progress, NOT put in files. */
+  reasoning?: string;
   usage?: ChatUsage;
   finishReason?: string;
 }
@@ -186,6 +189,19 @@ export interface StreamEvent {
  * Streaming chat completion. Yields content deltas as they arrive, plus
  * a final usage/finishReason. Streaming keeps the connection alive so
  * long generations don't look frozen and don't trip serverless timeouts.
+ *
+ * IMPORTANT — reasoning handling: we do NOT use Venice's
+ * `strip_thinking_response=true`. On heavy-reasoning models that suffix
+ * makes the API send *nothing at all* for the entire (multi-minute)
+ * thinking window, which looks identical to a dead connection and trips
+ * any stall ceiling. Instead we let the reasoning stream and separate it
+ * here: a model's thinking arrives either as a `reasoning_content` delta
+ * field or inline inside `<think>…</think>` tags in `content`. We surface
+ * thinking as `{reasoning}` events (so the connection stays demonstrably
+ * alive and the UI can show progress) and the real answer as `{delta}`
+ * events (which become the files). The `stripThinking` flag is kept for
+ * the API signature but no longer changes the request — separation is
+ * always done locally so we never get a dead window.
  */
 export async function* streamChatCompletion(
   apiKey: string,
@@ -199,9 +215,7 @@ export async function* streamChatCompletion(
   baseUrl: string = VENICE_BASE,
   signal?: AbortSignal,
 ): AsyncGenerator<StreamEvent> {
-  const modelId = params.stripThinking
-    ? `${params.model}:strip_thinking_response=true`
-    : params.model;
+  const modelId = params.model;
 
   const res = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
@@ -232,9 +246,54 @@ export async function* streamChatCompletion(
   const decoder = new TextDecoder();
   let buf = "";
 
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
+  // Stateful splitter for inline <think>…</think> tags in `content`.
+  // Tags can be split across SSE chunks, so we keep a small carry tail
+  // (never emitting the last few chars that could be a partial tag).
+  const OPEN = "<think>";
+  const CLOSE = "</think>";
+  let inThink = false;
+  let tagBuf = "";
+  function splitThink(text: string, flush = false): StreamEvent[] {
+    const out: StreamEvent[] = [];
+    tagBuf += text;
+    for (;;) {
+      if (!inThink) {
+        const i = tagBuf.indexOf(OPEN);
+        if (i === -1) {
+          const keep = flush ? 0 : OPEN.length - 1;
+          const safe = tagBuf.length - keep;
+          if (safe > 0) {
+            out.push({ delta: tagBuf.slice(0, safe) });
+            tagBuf = tagBuf.slice(safe);
+          }
+          break;
+        }
+        if (i > 0) out.push({ delta: tagBuf.slice(0, i) });
+        tagBuf = tagBuf.slice(i + OPEN.length);
+        inThink = true;
+      } else {
+        const j = tagBuf.indexOf(CLOSE);
+        if (j === -1) {
+          const keep = flush ? 0 : CLOSE.length - 1;
+          const safe = tagBuf.length - keep;
+          if (safe > 0) {
+            out.push({ reasoning: tagBuf.slice(0, safe) });
+            tagBuf = tagBuf.slice(safe);
+          }
+          break;
+        }
+        if (j > 0) out.push({ reasoning: tagBuf.slice(0, j) });
+        tagBuf = tagBuf.slice(j + CLOSE.length);
+        inThink = false;
+      }
+    }
+    return out;
+  }
+
+  let done = false;
+  while (!done) {
+    const { done: rDone, value } = await reader.read();
+    if (rDone) break;
     buf += decoder.decode(value, { stream: true });
     const lines = buf.split("\n");
     buf = lines.pop() ?? "";
@@ -242,18 +301,26 @@ export async function* streamChatCompletion(
       const t = line.trim();
       if (!t.startsWith("data:")) continue;
       const data = t.slice(5).trim();
-      if (data === "[DONE]") return;
+      if (data === "[DONE]") {
+        done = true;
+        break;
+      }
       try {
         const json = JSON.parse(data) as {
           choices?: Array<{
-            delta?: { content?: string };
+            delta?: { content?: string; reasoning_content?: string };
             finish_reason?: string;
           }>;
           usage?: ChatUsage;
         };
-        const delta = json.choices?.[0]?.delta?.content;
+        const d = json.choices?.[0]?.delta;
+        // Reasoning delivered as a dedicated field (DeepSeek-style).
+        if (d?.reasoning_content) yield { reasoning: d.reasoning_content };
+        // Answer content, with any inline <think> tags peeled off.
+        if (d?.content) {
+          for (const ev of splitThink(d.content)) yield ev;
+        }
         const fr = json.choices?.[0]?.finish_reason;
-        if (delta) yield { delta };
         if (fr) yield { finishReason: fr };
         if (json.usage) yield { usage: json.usage };
       } catch {
@@ -261,4 +328,6 @@ export async function* streamChatCompletion(
       }
     }
   }
+  // Flush any buffered tail (partial tag that never completed).
+  for (const ev of splitThink("", true)) yield ev;
 }
