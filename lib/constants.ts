@@ -47,6 +47,18 @@ export interface ProviderConfig {
   fallbackModels: string[];
   /** Whether this provider is wired up yet. */
   enabled: boolean;
+  /**
+   * Which request field caps the output length. Classic OpenAI-compatible
+   * (Venice) uses `max_tokens`; OpenAI's own reasoning models (gpt-5.x,
+   * o-series) require `max_completion_tokens` and reject `max_tokens`.
+   */
+  tokenParam: "max_tokens" | "max_completion_tokens";
+  /**
+   * Whether to send a custom `temperature`. OpenAI reasoning models only
+   * accept the default temperature and 400 on any custom value, so this
+   * is false for OpenAI and true for Venice.
+   */
+  sendTemperature: boolean;
 }
 
 export const PROVIDERS: readonly ProviderConfig[] = [
@@ -63,6 +75,21 @@ export const PROVIDERS: readonly ProviderConfig[] = [
       "claude-sonnet-4-6",
     ],
     enabled: true,
+    tokenParam: "max_tokens",
+    sendTemperature: true,
+  },
+  {
+    id: "openai",
+    label: "OpenAI",
+    baseUrl: "https://api.openai.com/v1",
+    keyUrl: "https://platform.openai.com/api-keys",
+    docsUrl: "https://developers.openai.com/api/docs",
+    fallbackModels: ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.1"],
+    enabled: true,
+    // OpenAI's GPT-5 family are reasoning models: completion budget is
+    // max_completion_tokens, and custom temperature is rejected.
+    tokenParam: "max_completion_tokens",
+    sendTemperature: false,
   },
 ] as const;
 
@@ -71,15 +98,29 @@ export const DEFAULT_PROVIDER_ID = "venice";
 export type ModelTier = "default" | "premium" | "value" | "balanced";
 
 export interface RecommendedModel {
-  /** Exact Venice model slug. */
+  /** Exact provider model slug. */
   id: string;
   tier: ModelTier;
   /** One-line rationale shown in the picker. */
   note: string;
+  /**
+   * Optional static metadata. Used when the provider's /models endpoint
+   * does NOT return capability/pricing (OpenAI's /models is id-only), so
+   * the cost meter and caps still work. When the API does return these
+   * (Venice's model_spec), the live values take precedence.
+   */
+  contextTokens?: number;
+  maxCompletionTokens?: number;
+  optimizedForCode?: boolean;
+  supportsReasoning?: boolean;
+  /** USD per 1M input (prompt) tokens. */
+  inputUsdPerMtok?: number;
+  /** USD per 1M output (completion) tokens. */
+  outputUsdPerMtok?: number;
 }
 
 /**
- * Curated shortlist of Venice models that fit the EIP Lab job. The
+ * Curated shortlist of models that fit the EIP Lab job, per provider. The
  * picker only offers these (intersected with what the user's key can
  * access). Ordered best-first; the first available one is auto-selected.
  *
@@ -89,49 +130,119 @@ export interface RecommendedModel {
  *   2. Code quality.
  *   3. Big context (EIP + forum + repo + transcript).
  *   4. Cost (the user's spend; also the research data).
+ *
+ * OpenAI entries carry static pricing/caps because OpenAI's /models is
+ * id-only (no pricing). Prices are USD per 1M tokens from the OpenAI
+ * pricing page (standard tier).
  */
-export const RECOMMENDED_MODELS: readonly RecommendedModel[] = [
-  {
-    id: "qwen3-coder-480b-a35b-instruct-turbo",
-    tier: "default",
-    note: "Coder · 65k output · 256k ctx · cheap — best all-round",
-  },
-  {
-    id: "openai-gpt-53-codex",
-    tier: "premium",
-    note: "Codex · 128k output · 400k ctx — top code quality",
-  },
-  {
-    id: "claude-opus-4-8",
-    tier: "premium",
-    note: "Best reasoning · 1M ctx — for the hardest EIPs",
-  },
-  {
-    id: "claude-sonnet-4-6",
-    tier: "balanced",
-    note: "Strong quality/price balance · 64k output",
-  },
-  {
-    id: "deepseek-v4-pro",
-    tier: "value",
-    note: "1M ctx · strong code · low cost",
-  },
-  {
-    id: "deepseek-v4-flash",
-    tier: "value",
-    note: "Cheapest viable full run · 1M ctx",
-  },
-  {
-    id: "zai-org-glm-5",
-    tier: "balanced",
-    note: "Solid mid-tier coder · 198k ctx",
-  },
-  {
-    id: "qwen3-5-397b-a17b",
-    tier: "balanced",
-    note: "Large MoE · 32k output",
-  },
-] as const;
+export const RECOMMENDED_MODELS: Record<string, readonly RecommendedModel[]> = {
+  venice: [
+    {
+      id: "qwen3-coder-480b-a35b-instruct-turbo",
+      tier: "default",
+      note: "Coder · 65k output · 256k ctx · cheap — best all-round",
+    },
+    {
+      id: "openai-gpt-53-codex",
+      tier: "premium",
+      note: "Codex · 128k output · 400k ctx — top code quality",
+    },
+    {
+      id: "claude-opus-4-8",
+      tier: "premium",
+      note: "Best reasoning · 1M ctx — for the hardest EIPs",
+    },
+    {
+      id: "claude-sonnet-4-6",
+      tier: "balanced",
+      note: "Strong quality/price balance · 64k output",
+    },
+    {
+      id: "deepseek-v4-pro",
+      tier: "value",
+      note: "1M ctx · strong code · low cost",
+    },
+    {
+      id: "deepseek-v4-flash",
+      tier: "value",
+      note: "Cheapest viable full run · 1M ctx",
+    },
+    {
+      id: "zai-org-glm-5",
+      tier: "balanced",
+      note: "Solid mid-tier coder · 198k ctx",
+    },
+    {
+      id: "qwen3-5-397b-a17b",
+      tier: "balanced",
+      note: "Large MoE · 32k output",
+    },
+  ],
+  openai: [
+    {
+      id: "gpt-5.5",
+      tier: "default",
+      note: "Flagship · best coding+reasoning · 400k ctx",
+      contextTokens: 400000,
+      maxCompletionTokens: 128000,
+      optimizedForCode: true,
+      supportsReasoning: true,
+      inputUsdPerMtok: 5,
+      outputUsdPerMtok: 30,
+    },
+    {
+      id: "gpt-5.5-pro",
+      tier: "premium",
+      note: "Deepest reasoning · for the hardest EIPs · pricey",
+      contextTokens: 400000,
+      maxCompletionTokens: 128000,
+      optimizedForCode: true,
+      supportsReasoning: true,
+      inputUsdPerMtok: 30,
+      outputUsdPerMtok: 180,
+    },
+    {
+      id: "gpt-5.4",
+      tier: "balanced",
+      note: "Strong quality/price balance · 400k ctx",
+      contextTokens: 400000,
+      maxCompletionTokens: 128000,
+      optimizedForCode: true,
+      supportsReasoning: true,
+      inputUsdPerMtok: 2.5,
+      outputUsdPerMtok: 15,
+    },
+    {
+      id: "gpt-5.1",
+      tier: "value",
+      note: "Capable + cheaper · 400k ctx",
+      contextTokens: 400000,
+      maxCompletionTokens: 128000,
+      optimizedForCode: true,
+      supportsReasoning: true,
+      inputUsdPerMtok: 1.25,
+      outputUsdPerMtok: 10,
+    },
+    {
+      id: "gpt-5.4-mini",
+      tier: "value",
+      note: "Cheapest viable full run · 400k ctx",
+      contextTokens: 400000,
+      maxCompletionTokens: 128000,
+      optimizedForCode: true,
+      supportsReasoning: true,
+      inputUsdPerMtok: 0.75,
+      outputUsdPerMtok: 4.5,
+    },
+  ],
+};
+
+/** Curated models for a provider (empty if the provider has none). */
+export function recommendedFor(
+  providerId: string,
+): readonly RecommendedModel[] {
+  return RECOMMENDED_MODELS[providerId] ?? [];
+}
 
 export type DemoAccent = "neon-pink" | "neon-cyan" | "neon-purple";
 export type DemoShape = "A" | "B" | "C";

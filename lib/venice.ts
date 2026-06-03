@@ -211,11 +211,34 @@ export async function* streamChatCompletion(
     maxTokens?: number;
     temperature?: number;
     stripThinking?: boolean;
+    /**
+     * Output-length field name. Venice uses "max_tokens"; OpenAI's
+     * reasoning models require "max_completion_tokens". Default
+     * "max_tokens" for back-compat.
+     */
+    tokenParam?: "max_tokens" | "max_completion_tokens";
+    /**
+     * Whether to send a custom temperature. OpenAI reasoning models 400
+     * on any non-default value, so the caller sets this false for OpenAI.
+     * Default true.
+     */
+    sendTemperature?: boolean;
   },
   baseUrl: string = VENICE_BASE,
   signal?: AbortSignal,
 ): AsyncGenerator<StreamEvent> {
   const modelId = params.model;
+
+  const reqBody: Record<string, unknown> = {
+    model: modelId,
+    messages: params.messages,
+    [params.tokenParam ?? "max_tokens"]: params.maxTokens ?? 4096,
+    stream: true,
+    stream_options: { include_usage: true },
+  };
+  if (params.sendTemperature ?? true) {
+    reqBody.temperature = params.temperature ?? 0.4;
+  }
 
   const res = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
@@ -223,14 +246,7 @@ export async function* streamChatCompletion(
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      model: modelId,
-      messages: params.messages,
-      max_tokens: params.maxTokens ?? 4096,
-      temperature: params.temperature ?? 0.4,
-      stream: true,
-      stream_options: { include_usage: true },
-    }),
+    body: JSON.stringify(reqBody),
     signal,
   });
 
