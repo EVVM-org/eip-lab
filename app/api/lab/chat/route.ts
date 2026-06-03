@@ -67,6 +67,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid phase" }, { status: 400 });
   }
   const heavyPhase = phase === "contracts" || phase === "review";
+  // OpenAI's GPT-5 family are reasoning models: hidden reasoning tokens
+  // are drawn from the completion budget, so a tight cap on the light
+  // phases can be eaten by reasoning and return an empty/truncated answer.
+  // sendTemperature=false is our reasoning-provider signal (OpenAI).
+  const reasoningProvider = provider.sendTemperature === false;
 
   const turns = Array.isArray(body.messages) ? body.messages : [];
 
@@ -82,8 +87,10 @@ export async function POST(req: NextRequest) {
   ];
 
   // Contracts/review phases emit multiple full files — give them real
-  // room, but never exceed the model's own max-completion limit.
-  const desired = heavyPhase ? 32000 : 4096;
+  // room, but never exceed the model's own max-completion limit. For
+  // reasoning providers, raise the light-phase floor so reasoning tokens
+  // don't starve the visible answer.
+  const desired = heavyPhase ? 32000 : reasoningProvider ? 16000 : 4096;
   const cap =
     body.maxCompletionTokens && body.maxCompletionTokens > 0
       ? body.maxCompletionTokens
@@ -95,6 +102,8 @@ export async function POST(req: NextRequest) {
   const stripThinking = body.stripThinking ?? true;
   const baseUrl = provider.baseUrl;
   const providerId = provider.id;
+  const tokenParam = provider.tokenParam;
+  const sendTemperature = provider.sendTemperature;
 
   // Stream NDJSON: one JSON object per line.
   //   {"delta":"..."}                  incremental text
@@ -147,7 +156,15 @@ export async function POST(req: NextRequest) {
       try {
         for await (const ev of streamChatCompletion(
           apiKey,
-          { model, messages, maxTokens, temperature: heavyPhase ? 0.2 : 0.4, stripThinking },
+          {
+            model,
+            messages,
+            maxTokens,
+            temperature: heavyPhase ? 0.2 : 0.4,
+            stripThinking,
+            tokenParam,
+            sendTemperature,
+          },
           baseUrl,
           upstream.signal,
         )) {

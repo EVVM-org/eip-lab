@@ -7,7 +7,7 @@ import Tag from "@/components/ui/Tag";
 import {
   PROVIDERS,
   DEFAULT_PROVIDER_ID,
-  RECOMMENDED_MODELS,
+  recommendedFor,
 } from "@/lib/constants";
 import { detectLinks, type DetectedLink } from "@/lib/linkDetect";
 import { parseLabFiles, type LabFile } from "@/lib/labFiles";
@@ -64,16 +64,21 @@ export default function LabApp() {
 
   const transcriptRef = useRef<HTMLDivElement>(null);
 
-  // Restore remembered key on mount.
+  // Restore remembered key on mount / provider switch, and reset the
+  // model picker — model ids are provider-specific, so a stale Venice
+  // slug must not linger when the user flips to OpenAI.
   useEffect(() => {
+    setModels([]);
+    setModel("");
     try {
       const raw = localStorage.getItem(KEY_STORAGE);
-      if (raw) {
-        const map = JSON.parse(raw) as Record<string, string>;
-        if (map[providerId]) {
-          setApiKey(map[providerId]);
-          setRememberKey(true);
-        }
+      const map = raw ? (JSON.parse(raw) as Record<string, string>) : {};
+      if (map[providerId]) {
+        setApiKey(map[providerId]);
+        setRememberKey(true);
+      } else {
+        setApiKey("");
+        setRememberKey(false);
       }
     } catch {
       /* ignore */
@@ -128,11 +133,28 @@ export default function LabApp() {
       const json = await res.json();
       const list: ModelInfo[] = json.models ?? [];
       // Offer only the curated best-fit models that this key can access,
-      // in recommended (best-first) order. If none are available, fall
-      // back to the full list so the picker is never empty.
-      const curated = RECOMMENDED_MODELS.map((r) =>
-        list.find((m) => m.id === r.id),
-      ).filter(Boolean) as ModelInfo[];
+      // in recommended (best-first) order. Merge live capability/pricing
+      // (Venice's model_spec) with the static catalog (OpenAI's /models is
+      // id-only, so pricing/caps come from the catalog). If the API
+      // returned a non-empty list, keep only curated models present in it
+      // (availability); otherwise show the whole curated catalog.
+      const recs = recommendedFor(providerId);
+      const curated = recs
+        .map((r) => {
+          const apiM = list.find((m) => m.id === r.id);
+          if (list.length && !apiM) return null; // not accessible by this key
+          return {
+            id: r.id,
+            contextTokens: apiM?.contextTokens ?? r.contextTokens,
+            maxCompletionTokens:
+              apiM?.maxCompletionTokens ?? r.maxCompletionTokens,
+            optimizedForCode: apiM?.optimizedForCode ?? r.optimizedForCode,
+            supportsReasoning: apiM?.supportsReasoning ?? r.supportsReasoning,
+            inputUsdPerMtok: apiM?.inputUsdPerMtok ?? r.inputUsdPerMtok,
+            outputUsdPerMtok: apiM?.outputUsdPerMtok ?? r.outputUsdPerMtok,
+          } as ModelInfo;
+        })
+        .filter(Boolean) as ModelInfo[];
       const finalList = curated.length ? curated : list;
       setModels(finalList);
       if (finalList.length) setModel(finalList[0].id);
@@ -585,7 +607,7 @@ License: EVVM Noncommercial License v1.0
                   type="password"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="vk-..."
+                  placeholder={providerId === "openai" ? "sk-..." : "vk-..."}
                   className="w-full border-2 border-[rgba(255,255,255,0.15)] bg-[#07010f] px-2 py-1.5 font-[family-name:var(--font-mono)] text-[var(--color-text)] focus:border-[var(--color-vp-cyan)] focus:outline-none"
                 />
               </label>
@@ -621,7 +643,7 @@ License: EVVM Noncommercial License v1.0
                     className="flex-1 border-2 border-[rgba(255,255,255,0.15)] bg-[#07010f] px-2 py-1.5 font-[family-name:var(--font-mono)] text-xs text-[var(--color-text)] focus:border-[var(--color-vp-cyan)] focus:outline-none"
                   >
                     {models.map((m, i) => {
-                      const rec = RECOMMENDED_MODELS.find(
+                      const rec = recommendedFor(providerId).find(
                         (r) => r.id === m.id,
                       );
                       const prefix =
@@ -640,7 +662,7 @@ License: EVVM Noncommercial License v1.0
 
               {selectedModel &&
                 (() => {
-                  const rec = RECOMMENDED_MODELS.find(
+                  const rec = recommendedFor(providerId).find(
                     (r) => r.id === selectedModel.id,
                   );
                   return rec ? (
