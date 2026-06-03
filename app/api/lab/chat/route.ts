@@ -105,6 +105,19 @@ export async function POST(req: NextRequest) {
   const promptChars = messages.reduce((n, m) => n + m.content.length, 0);
 
   const encoder = new TextEncoder();
+  // Reasoning models (and Venice's strip_thinking_response) can stay
+  // silent for a long time while the model thinks — no content deltas
+  // flow during that window. The client's idle watchdog (45s) would
+  // abort a perfectly healthy stream and surface a false "network error".
+  // To keep the connection demonstrably alive WITHOUT defeating real
+  // stall detection, the server emits a lightweight heartbeat every few
+  // seconds — but only while the upstream provider is still within its
+  // stall ceiling. If the provider genuinely hangs past the ceiling,
+  // heartbeats stop and we abort the upstream fetch so the failure is
+  // honest. If the serverless function itself dies, heartbeats also stop
+  // and the client watchdog correctly fires.
+  const HEARTBEAT_MS = 12_000;
+  const PROVIDER_STALL_MS = 180_000; // no provider activity this long = real stall
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const send = (obj: unknown) =>
@@ -112,12 +125,33 @@ export async function POST(req: NextRequest) {
       let usage: ChatUsage | null = null;
       let finishReason: string | null = null;
       let outChars = 0;
+
+      // Stall watchdog: abort the upstream fetch if the provider sends
+      // nothing (not even thinking progress) for PROVIDER_STALL_MS.
+      const upstream = new AbortController();
+      let lastActivity = Date.now();
+      let stalled = false;
+      const heartbeat = setInterval(() => {
+        if (Date.now() - lastActivity > PROVIDER_STALL_MS) {
+          stalled = true;
+          upstream.abort();
+          return;
+        }
+        try {
+          send({ heartbeat: 1 });
+        } catch {
+          /* controller closed */
+        }
+      }, HEARTBEAT_MS);
+
       try {
         for await (const ev of streamChatCompletion(
           apiKey,
           { model, messages, maxTokens, temperature: heavyPhase ? 0.2 : 0.4, stripThinking },
           baseUrl,
+          upstream.signal,
         )) {
+          lastActivity = Date.now();
           if (ev.delta) {
             outChars += ev.delta.length;
             send({ delta: ev.delta });
@@ -152,8 +186,13 @@ export async function POST(req: NextRequest) {
         });
       } catch (err) {
         const e = err as VeniceError;
-        send({ error: e.message ?? "chat failed" });
+        send({
+          error: stalled
+            ? `Provider sent nothing for ${Math.round(PROVIDER_STALL_MS / 1000)}s — upstream stalled. Retry the step.`
+            : (e.message ?? "chat failed"),
+        });
       } finally {
+        clearInterval(heartbeat);
         controller.close();
       }
     },
