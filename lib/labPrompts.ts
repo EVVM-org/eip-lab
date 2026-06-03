@@ -66,6 +66,29 @@ didn't write). The only acceptable external imports are ubiquitous
 OpenZeppelin primitives (IERC20, ECDSA) — and even those you may inline
 if it keeps the package self-contained.
 
+NEVER FABRICATE CONSTANTS OR PARAMETERS. You do NOT have, from memory,
+the round constants / MDS or diffusion matrices / S-box parameters of
+Poseidon/Poseidon2/Rescue/MiMC, any elliptic-curve verification key,
+any trusted-setup output, or any precomputed empty-subtree (zero-node)
+Merkle ladder. Inventing them — pasting 0x1234…, repeated-nibble
+fillers, or anything labelled "canonical from the reference
+implementation" — is a CRITICAL FAILURE that silently corrupts the
+artifact. Only hardcode such values if they appear VERBATIM in the EIP
+material provided. Otherwise:
+  - For an exotic hash, the mock IS a keccak reduction that needs NO
+    constants — do NOT write a faux-real permutation (round loops over
+    invented constants) and call it a mock. Write exactly:
+      uint256 constant P = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001;
+      function hash(uint256[] memory xs) internal pure returns (uint256) {
+          return uint256(keccak256(abi.encode(xs))) % P; }
+    with domain separation folded into xs[0]. That is PREFERRED precisely
+    because it is parameter-free.
+  - For a value that must be precomputed (e.g. a Merkle empty-subtree
+    ladder), DERIVE it in the constructor with a loop over that same mock
+    hash — never paste a constant table.
+"Simplest correct implementation" for a missing primitive means this
+keccak mock, NOT a hand-rolled real cipher with guessed numbers.
+
 EVVM Core public surface (use these EXACT signatures; do not invent
 function names — Solidity 0.8.30):
   function validateAndConsumeNonce(address user, address senderExecutor,
@@ -159,7 +182,14 @@ HARD COMPILE RULES — the output MUST compile under solc 0.8.30. Code
 that violates any of these is a failure:
 
 - NO placeholder values. Never write 0x... or ... or "TODO" as a
-  value. Every constant has a real value. For domain separators and
+  value. Equally: NO FABRICATED constants (see "NEVER FABRICATE
+  CONSTANTS" above) — no invented Poseidon round constants, MDS
+  matrices, verification keys, or precomputed empty-node ladders. Beyond
+  corrupting the artifact, hand-typed long hex tables routinely produce
+  literal compile errors (a missing 0x prefix, a literal that isn't 64
+  hex digits, a value >= the field). Use the parameter-free keccak mock
+  and derive any ladder in the constructor instead.
+  Every constant that remains has a real value. For domain separators and
   derived constants, compute them inline, e.g.:
     uint256 constant FIELD = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001;
     uint256 constant NOTE_DOMAIN = uint256(keccak256("eip-8182.note_commitment")) % FIELD;
