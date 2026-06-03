@@ -197,6 +197,7 @@ export async function* streamChatCompletion(
     stripThinking?: boolean;
   },
   baseUrl: string = VENICE_BASE,
+  signal?: AbortSignal,
 ): AsyncGenerator<StreamEvent> {
   const modelId = params.stripThinking
     ? `${params.model}:strip_thinking_response=true`
@@ -216,6 +217,7 @@ export async function* streamChatCompletion(
       stream: true,
       stream_options: { include_usage: true },
     }),
+    signal,
   });
 
   if (!res.ok || !res.body) {
