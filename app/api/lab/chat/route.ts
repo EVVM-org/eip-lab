@@ -156,6 +156,11 @@ export async function POST(req: NextRequest) {
             outChars += ev.delta.length;
             send({ delta: ev.delta });
           }
+          // Reasoning/thinking content: forward as a distinct event so
+          // the client can show live progress. It feeds lastActivity
+          // (above), so a long thinking window no longer looks like a
+          // stall — but it is NOT part of the answer/files.
+          if (ev.reasoning) send({ reasoning: ev.reasoning });
           if (ev.usage) usage = ev.usage;
           if (ev.finishReason) finishReason = ev.finishReason;
         }
