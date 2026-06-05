@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import LabApp from "@/components/lab/LabApp";
 import GlitchText from "@/components/ui/GlitchText";
+import ExperimentalBanner from "@/components/ui/ExperimentalBanner";
 
 export const metadata: Metadata = {
   title: "Launch — EVVM EIP Lab",
@@ -28,6 +29,7 @@ export default function LabPage() {
           download documented Solidity. EVVM is where protocol-level
           experiments get modeled at the contract layer.
         </p>
+        <ExperimentalBanner className="mt-4 max-w-3xl" />
       </header>
       <LabApp />
     </>
