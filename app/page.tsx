@@ -4,6 +4,7 @@ import How from "@/components/landing/How";
 import Compare from "@/components/landing/Compare";
 import DemoPicker from "@/components/landing/DemoPicker";
 import FAQ from "@/components/landing/FAQ";
+import Roadmap from "@/components/landing/Roadmap";
 import Footer from "@/components/chrome/Footer";
 import ExperimentalBanner from "@/components/ui/ExperimentalBanner";
 
@@ -18,6 +19,7 @@ export default function Home() {
       <How />
       <Compare />
       <DemoPicker />
+      <Roadmap />
       <FAQ />
       <Footer />
     </>
