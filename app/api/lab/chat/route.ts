@@ -42,6 +42,8 @@ export async function POST(req: NextRequest) {
     messages?: ChatMessage[];
     eipContext?: string;
     maxCompletionTokens?: number;
+    /** The selected model's context window (tokens) — for context budgeting. */
+    contextTokens?: number;
     stripThinking?: boolean;
   };
   try {
@@ -76,18 +78,80 @@ export async function POST(req: NextRequest) {
 
   const turns = Array.isArray(body.messages) ? body.messages : [];
 
+  // Output budget first (needed for context budgeting below). Contracts/
+  // review emit multiple full files — give them room, but never exceed the
+  // model's own max-completion limit. Reasoning providers get a higher
+  // light-phase floor so hidden reasoning doesn't starve the answer.
+  const desired = heavyPhase ? 32000 : reasoningProvider ? 16000 : 4096;
+  const capTokens =
+    body.maxCompletionTokens && body.maxCompletionTokens > 0
+      ? body.maxCompletionTokens
+      : desired;
+  const maxTokens = Math.min(desired, capTokens);
+
   // Ground every phase in the full EVVM stack reference so the model
   // understands what each core contract does and what must change to test
   // the EIP. Fetched once and cached; empty string if unavailable.
-  const evvmDocs = await getEvvmContext();
+  const fullEvvmDocs = await getEvvmContext();
+
+  // ── Context budgeting (large-EIP safety) ──────────────────────────────
+  // We inject ~290k tokens of EVVM docs PLUS the EIP. A large EIP can push a
+  // 400k-context model past its window and hard-fail (400 context_length).
+  // Budget the input so (EVVM docs + EIP) fits the model's window with room
+  // for the output and the conversation. The EIP is the subject (keep as
+  // much as possible); the EVVM reference is grounding (trim to fill the
+  // remainder). On 1M-context models nothing is trimmed.
+  const sysPromptText = systemPromptFor(phase);
+  const CHARS_PER_TOKEN = 4;
+  const toTokens = (chars: number) => Math.ceil(chars / CHARS_PER_TOKEN);
+  const ctxWindow =
+    body.contextTokens && body.contextTokens > 0
+      ? body.contextTokens
+      : 400_000;
+  const turnsChars = turns.reduce((n, m) => n + m.content.length, 0);
+  // Reserve the output budget plus a margin for prompt overhead and
+  // tokenizer-estimate error.
+  const reserveTokens = maxTokens + 12_000;
+  const baseTokens = toTokens(sysPromptText.length + turnsChars);
+  const availTokens = Math.max(
+    4_000,
+    ctxWindow - baseTokens - reserveTokens,
+  );
+  const availChars = availTokens * CHARS_PER_TOKEN;
+
+  let eipMaterial = body.eipContext ?? "";
+  let evvmDocs = fullEvvmDocs;
+  let eipTrimmed = false;
+  let docsTrimmed = false;
+
+  // EIP first, but capped at 65% of the budget so a gigantic EIP can't zero
+  // out the grounding when both are large. (If there are no docs, the EIP
+  // may use the whole budget.)
+  const eipCapChars = Math.floor(availChars * (evvmDocs ? 0.65 : 1));
+  if (eipMaterial.length > eipCapChars) {
+    eipMaterial =
+      eipMaterial.slice(0, eipCapChars) +
+      "\n\n[... EIP material truncated to fit the model's context window ...]";
+    eipTrimmed = true;
+  }
+  // Docs take whatever budget remains after the EIP.
+  const docsCapChars = Math.max(0, availChars - eipMaterial.length);
+  if (evvmDocs.length > docsCapChars) {
+    evvmDocs =
+      docsCapChars > 2_000
+        ? evvmDocs.slice(0, docsCapChars) +
+          "\n\n[... EVVM reference truncated to fit the model's context window ...]"
+        : "";
+    docsTrimmed = true;
+  }
 
   const systemContent =
-    systemPromptFor(phase) +
+    sysPromptText +
     (evvmDocs
       ? `\n\n--- EVVM STACK REFERENCE (evvm.info/llms-full.txt) ---\n${evvmDocs}\n--- END EVVM STACK REFERENCE ---`
       : "") +
-    (body.eipContext
-      ? `\n\n--- EIP MATERIAL PROVIDED BY THE USER ---\n${body.eipContext}\n--- END EIP MATERIAL ---`
+    (eipMaterial
+      ? `\n\n--- EIP MATERIAL PROVIDED BY THE USER ---\n${eipMaterial}\n--- END EIP MATERIAL ---`
       : "");
 
   const messages: ChatMessage[] = [
@@ -95,16 +159,20 @@ export async function POST(req: NextRequest) {
     ...turns.filter((m) => m.role === "user" || m.role === "assistant"),
   ];
 
-  // Contracts/review phases emit multiple full files — give them real
-  // room, but never exceed the model's own max-completion limit. For
-  // reasoning providers, raise the light-phase floor so reasoning tokens
-  // don't starve the visible answer.
-  const desired = heavyPhase ? 32000 : reasoningProvider ? 16000 : 4096;
-  const cap =
-    body.maxCompletionTokens && body.maxCompletionTokens > 0
-      ? body.maxCompletionTokens
-      : desired;
-  const maxTokens = Math.min(desired, cap);
+  // Non-fatal notice if we trimmed to fit (no silent caps).
+  let contextNotice: string | null = null;
+  if (eipTrimmed || docsTrimmed) {
+    const parts: string[] = [];
+    if (eipTrimmed) parts.push("the EIP");
+    if (docsTrimmed) parts.push("the EVVM reference");
+    contextNotice =
+      `Large input: trimmed ${parts.join(" and ")} to fit the model's ` +
+      `${Math.round(ctxWindow / 1000)}k context. For full grounding on a big EIP, ` +
+      `use a 1M-context model (deepseek-v4-pro / claude-*).`;
+    console.log(
+      `[lab/chat] context budgeted ctx=${ctxWindow} eipTrimmed=${eipTrimmed} docsTrimmed=${docsTrimmed}`,
+    );
+  }
 
   const apiKey = body.apiKey;
   const model = body.model;
@@ -140,6 +208,8 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       const send = (obj: unknown) =>
         controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
+      // Surface a context-trim notice up front (non-fatal).
+      if (contextNotice) send({ notice: contextNotice });
       let usage: ChatUsage | null = null;
       let finishReason: string | null = null;
       let outChars = 0;

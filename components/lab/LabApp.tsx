@@ -50,6 +50,8 @@ export default function LabApp() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Non-fatal context-trim notice (large EIP / docs trimmed to fit).
+  const [notice, setNotice] = useState<string | null>(null);
 
   const [tokens, setTokens] = useState({ prompt: 0, completion: 0, total: 0 });
   const [costUsd, setCostUsd] = useState(0);
@@ -285,6 +287,7 @@ export default function LabApp() {
       return;
     }
     setError(null);
+    setNotice(null);
     setBusy(true);
     // "review" is a sub-step of phase 4 — keep the visible stepper on
     // contracts so the progress UI doesn't break.
@@ -336,6 +339,7 @@ export default function LabApp() {
       messages: nextMessages,
       eipContext: opts?.contextOverride ?? eipContext,
       maxCompletionTokens: selectedModel?.maxCompletionTokens,
+      contextTokens: selectedModel?.contextTokens,
       stripThinking,
     });
 
@@ -409,6 +413,7 @@ export default function LabApp() {
                   delta?: string;
                   reasoning?: string;
                   heartbeat?: number;
+                  notice?: string;
                   usage?: ChatUsage | null;
                   finishReason?: string | null;
                   truncated?: boolean;
@@ -421,6 +426,10 @@ export default function LabApp() {
                 }
                 if (ev.error) {
                   softError = ev.error;
+                  continue;
+                }
+                if (ev.notice) {
+                  setNotice(ev.notice);
                   continue;
                 }
                 if (ev.reasoning) {
@@ -564,6 +573,7 @@ License: EVVM Noncommercial License v1.0
     setTokens({ prompt: 0, completion: 0, total: 0 });
     setCostUsd(0);
     setError(null);
+    setNotice(null);
   }
 
   const canStart = apiKey.length >= 8 && model && eipContext.trim().length > 20;
@@ -951,6 +961,12 @@ License: EVVM Noncommercial License v1.0
                 {error && (
                   <span className="font-[family-name:var(--font-mono)] text-[11px] text-[var(--color-vp-pink)]">
                     {error}
+                  </span>
+                )}
+
+                {notice && !error && (
+                  <span className="w-full font-[family-name:var(--font-mono)] text-[11px] text-[var(--color-amber)]">
+                    ⚠ {notice}
                   </span>
                 )}
 
