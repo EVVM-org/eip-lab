@@ -24,10 +24,11 @@ export default function LabPage() {
           <GlitchText color="pink">EVVM EIP Lab</GlitchText>
         </h1>
         <p className="mt-3 max-w-3xl font-[family-name:var(--font-mono)] text-sm leading-relaxed text-[var(--color-text-muted)]">
-          Bring an EIP and your own provider key. Four phases: upload →
-          read &amp; agree on what it is → map it onto the EVVM core →
-          download documented Solidity. EVVM is where protocol-level
-          experiments get modeled at the contract layer.
+          Bring an EIP — paste it or upload a .md/.txt — and your own
+          provider key. The Lab researches it against the full EVVM stack,
+          asks you up to 5 questions to find the happy path, then hands
+          back documented Solidity. Three phases: upload → deep research →
+          download .sol.
         </p>
         <ExperimentalBanner className="mt-4 max-w-3xl" />
       </header>

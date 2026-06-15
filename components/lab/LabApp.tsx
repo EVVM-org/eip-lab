@@ -14,16 +14,18 @@ import { parseLabFiles, type LabFile } from "@/lib/labFiles";
 import { buildZip, downloadBlob } from "@/lib/zip";
 import type { ChatMessage, ChatUsage, ModelInfo } from "@/lib/venice";
 
-type Phase = "upload" | "summarize" | "map" | "contracts" | "review";
+type Phase = "upload" | "research" | "contracts" | "review";
 
 const PHASES: { id: Phase; n: string; label: string }[] = [
   { id: "upload", n: "01", label: "Upload" },
-  { id: "summarize", n: "02", label: "Read & Agree" },
-  { id: "map", n: "03", label: "Map the surface" },
-  { id: "contracts", n: "04", label: "Download .sol" },
+  { id: "research", n: "02", label: "Deep research" },
+  { id: "contracts", n: "03", label: "Download .sol" },
 ];
 
 const KEY_STORAGE = "eiplab_provider_keys";
+// The deep-research phase is capped at 5 exchanges (the model converges on
+// the happy path within that window, then we move to contracts).
+const MAX_RESEARCH_TURNS = 5;
 
 export default function LabApp() {
   const [providerId, setProviderId] = useState(DEFAULT_PROVIDER_ID);
@@ -44,6 +46,7 @@ export default function LabApp() {
   );
 
   const [phase, setPhase] = useState<Phase>("upload");
+  const [researchTurns, setResearchTurns] = useState(0);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -168,6 +171,31 @@ export default function LabApp() {
     }
   }
 
+  function onUploadFile(file: File | undefined) {
+    if (!file) return;
+    setError(null);
+    // Only accept plain-text / markdown EIP files.
+    const okType =
+      file.type === "" ||
+      file.type.startsWith("text/") ||
+      /\.(md|markdown|txt)$/i.test(file.name);
+    if (!okType) {
+      setError("Upload a .md or .txt file (plain text).");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result ?? "");
+      setEipText((prev) =>
+        prev.trim()
+          ? `${prev.trim()}\n\n# ${file.name}\n\n${text}`
+          : text,
+      );
+    };
+    reader.onerror = () => setError(`Could not read ${file.name}.`);
+    reader.readAsText(file);
+  }
+
   async function fetchLink(url: string) {
     setError(null);
     try {
@@ -239,9 +267,10 @@ export default function LabApp() {
 
     // busy is already true; send() will keep it managed.
     setBusy(false);
+    setResearchTurns(1);
     await send(
-      "summarize",
-      "Read the EIP material I provided and tell me exactly what it is, in as much depth as it warrants. Base it ONLY on the provided material. Confirm the intent with me before we map it onto EVVM.",
+      "research",
+      "Here is the EIP. Do deep research on it and on the EVVM stack reference you have, confirm what it is, and ask me up to 5 focused questions so we can converge on the best happy path to test this EIP on the EVVM stack (including which core contracts would change).",
       { contextOverride: ctx },
     );
   }
@@ -527,6 +556,7 @@ License: EVVM Noncommercial License v1.0
 
   function reset() {
     setPhase("upload");
+    setResearchTurns(0);
     setMessages([]);
     setFiles([]);
     setContractsRaw("");
@@ -725,15 +755,29 @@ License: EVVM Noncommercial License v1.0
 
           <WindowFrame title="~/eiplab/eip-input" accent="pink">
             <div className="space-y-3">
-              <p className="font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-widest text-[var(--color-text-dim)]">
-                paste the EIP — text and/or links. no limit.
-              </p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-widest text-[var(--color-text-dim)]">
+                  paste the EIP — or upload a file
+                </p>
+                <label className="cursor-pointer border border-[var(--color-vp-pink)] px-1.5 py-0.5 font-[family-name:var(--font-mono)] text-[9px] uppercase text-[var(--color-vp-pink)] hover:bg-[rgba(255,0,110,0.1)]">
+                  ↑ upload .md / .txt
+                  <input
+                    type="file"
+                    accept=".md,.markdown,.txt,text/markdown,text/plain"
+                    className="hidden"
+                    onChange={(e) => {
+                      onUploadFile(e.target.files?.[0]);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              </div>
               <textarea
                 value={eipText}
                 onChange={(e) => setEipText(e.target.value)}
                 rows={10}
                 placeholder={
-                  "Paste the full EIP text, or drop links:\n" +
+                  "Paste the full EIP text, upload a .md/.txt file, or drop links:\n" +
                   "https://eips.ethereum.org/EIPS/eip-XXXX\n" +
                   "https://ethereum-magicians.org/t/...\n" +
                   "https://github.com/your/repo"
@@ -796,7 +840,7 @@ License: EVVM Noncommercial License v1.0
               >
                 {busy && phase === "upload"
                   ? "fetching EIP + starting…"
-                  : "↳ Launch EIP Lab"}
+                  : "↳ Launch deep research"}
               </PixelButton>
               <p className="font-[family-name:var(--font-mono)] text-[9px] text-[var(--color-text-dim)]">
                 {!canStart
@@ -824,9 +868,9 @@ License: EVVM Noncommercial License v1.0
               </span>
               <span className="text-lg font-bold tabular-nums text-[var(--color-matrix)]">
                 {costUsd > 0
-                  ? `$${costUsd.toFixed(4)}`
+                  ? `$${costUsd.toFixed(2)}`
                   : selectedModel?.inputUsdPerMtok != null
-                    ? "$0.0000"
+                    ? "$0.00"
                     : "—"}
               </span>
             </div>
@@ -857,10 +901,10 @@ License: EVVM Noncommercial License v1.0
                       ▊ EVVM EIP Lab
                     </p>
                     <p>
-                      Configure a provider, paste an EIP, and launch. The
-                      Lab reads it, agrees with you on what it is, maps it
-                      onto the EVVM core, and hands back documented
-                      Solidity.
+                      Configure a provider, paste or upload an EIP, and
+                      launch. The Lab researches it against the full EVVM
+                      stack, asks you up to 5 questions to find the happy
+                      path, then hands back documented Solidity.
                     </p>
                   </div>
                 </div>
@@ -926,46 +970,54 @@ License: EVVM Noncommercial License v1.0
                   </PixelButton>
                 )}
 
-                {phase === "summarize" && !busy && (
-                  <PixelButton
-                    variant="secondary"
-                    size="sm"
-                    onClick={() =>
-                      send(
-                        "map",
-                        "Agreed. Now map this onto the EVVM stack: pick the implementation shape and why, do the dependency survey, and walk me through the technical decisions.",
-                      )
-                    }
-                  >
-                    ✓ agree → map the surface
-                  </PixelButton>
-                )}
-
-                {phase === "map" && !busy && (
-                  <PixelButton
-                    variant="phosphor"
-                    size="sm"
-                    onClick={() =>
-                      send(
-                        "contracts",
-                        "The design is settled. Generate the documented Solidity now, one FILE: marker per file, plus the justification.",
-                      )
-                    }
-                  >
-                    ↳ generate contracts
-                  </PixelButton>
+                {phase === "research" && !busy && (
+                  <>
+                    <span className="font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-widest text-[var(--color-text-dim)]">
+                      deep research ·{" "}
+                      {Math.min(researchTurns, MAX_RESEARCH_TURNS)}/
+                      {MAX_RESEARCH_TURNS}
+                    </span>
+                    <PixelButton
+                      variant="phosphor"
+                      size="sm"
+                      onClick={() =>
+                        send(
+                          "contracts",
+                          "The happy path is settled. Generate the documented Solidity now per our research — one FILE: marker per file, plus the justification. Modify EVVM core contracts as diffs where we decided; otherwise add the services / mocks.",
+                        )
+                      }
+                    >
+                      ↳ generate contracts
+                    </PixelButton>
+                  </>
                 )}
 
                 <FollowUp
                   onSend={(text) => {
-                    const p = phase === "upload" ? "summarize" : phase;
+                    const p = phase === "upload" ? "research" : phase;
+                    if (p === "research") {
+                      // Cap the research conversation at 5 exchanges.
+                      if (researchTurns >= MAX_RESEARCH_TURNS) {
+                        setError(
+                          "Reached the 5-exchange research limit — generate the contracts.",
+                        );
+                        return;
+                      }
+                      setResearchTurns((t) => t + 1);
+                      send("research", text);
+                      return;
+                    }
                     // During the file-generating phases, a follow-up
                     // ("keep going", a correction) must ADD to the
                     // existing files, not clobber them.
                     const append = p === "contracts" || p === "review";
                     send(p, text, append ? { append: true } : undefined);
                   }}
-                  disabled={busy}
+                  disabled={
+                    busy ||
+                    (phase === "research" &&
+                      researchTurns >= MAX_RESEARCH_TURNS)
+                  }
                 />
               </div>
             )}

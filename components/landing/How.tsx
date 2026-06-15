@@ -7,25 +7,19 @@ const PHASES = [
     n: "01",
     accent: "pink" as const,
     title: "Upload",
-    body: "Load your EIP — paste the full text, or drop links (eips.ethereum.org, an Ethereum Magicians thread, a repo). No length limit. An important EIP can be hundreds of lines, and every line can matter.",
+    body: "Load your EIP — paste the full text, upload a .md/.txt file, or drop links (eips.ethereum.org, an Ethereum Magicians thread, a repo). No length limit. An important EIP can be hundreds of lines, and every line can matter.",
   },
   {
     n: "02",
     accent: "cyan" as const,
-    title: "Read & Agree",
-    body: "The Lab reads it and tells you what it is — status, surface, the real behavioral change. Then it asks: did I get the intent right? You correct it until you both agree. No forced word limit.",
+    title: "Deep research",
+    body: "The Lab researches your EIP against the full EVVM stack reference — what each core contract does and what would change to test it. It asks you up to 5 focused questions to converge on the happy path: which shape, which contracts, which dependencies to mock or defer.",
   },
   {
     n: "03",
-    accent: "purple" as const,
-    title: "Map the surface",
-    body: "The technical conversation: which implementation shape (modify the core, add a service, or an external adapter), which dependencies to vendor / mock / simulate / defer, which EVVM contracts change and how.",
-  },
-  {
-    n: "04",
     accent: "mint" as const,
     title: "Download .sol",
-    body: "The deliverable: documented, commented Solidity for the EVVM stack — modified core, new services, mocks — plus a per-contract justification. Download the package and take it from there.",
+    body: "The deliverable: documented, commented Solidity for the EVVM stack — modified core (as diffs), new services, mocks — plus a per-contract justification. Download the package and take it from there.",
   },
 ];
 
@@ -45,17 +39,17 @@ export default function How() {
             // how it works
           </p>
           <h2 className="text-4xl leading-tight md:text-5xl">
-            <GlitchText color="purple">Four phases</GlitchText>, end at
+            <GlitchText color="purple">Three phases</GlitchText>, end at
             Solidity.
           </h2>
           <p className="mt-4 max-w-2xl text-[var(--color-text-muted)]">
-            The EVVM EIP Lab drives all four. You make the calls it
-            can&apos;t — which path when an EIP requires another draft EIP,
-            which sub-experiment when the scope is huge.
+            The Lab drives the research, grounded in the full EVVM stack.
+            You answer up to 5 questions so it converges on the right way to
+            test your EIP — core modification, a service, or an adapter.
           </p>
         </header>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {PHASES.map((p) => (
             <WindowFrame
               key={p.n}
