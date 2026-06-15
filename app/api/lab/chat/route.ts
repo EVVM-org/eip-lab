@@ -6,6 +6,7 @@ import {
   type VeniceError,
 } from "@/lib/venice";
 import { systemPromptFor, type LabPhase } from "@/lib/labPrompts";
+import { getEvvmContext } from "@/lib/evvmContext";
 import { PROVIDERS } from "@/lib/constants";
 
 export const runtime = "nodejs";
@@ -22,7 +23,7 @@ export const maxDuration = 300;
  *   providerId: string,
  *   apiKey: string,        // user's key — used once, never stored
  *   model: string,
- *   phase: "summarize" | "map" | "contracts",
+ *   phase: "research" | "contracts" | "review",
  *   messages: ChatMessage[],   // prior turns (user/assistant), no system
  *   eipContext?: string,       // pasted EIP text + fetched link content
  * }
@@ -62,8 +63,8 @@ export async function POST(req: NextRequest) {
   if (!body.model) {
     return NextResponse.json({ error: "missing model" }, { status: 400 });
   }
-  const phase: LabPhase = body.phase ?? "summarize";
-  if (!["summarize", "map", "contracts", "review"].includes(phase)) {
+  const phase: LabPhase = body.phase ?? "research";
+  if (!["research", "contracts", "review"].includes(phase)) {
     return NextResponse.json({ error: "invalid phase" }, { status: 400 });
   }
   const heavyPhase = phase === "contracts" || phase === "review";
@@ -75,8 +76,16 @@ export async function POST(req: NextRequest) {
 
   const turns = Array.isArray(body.messages) ? body.messages : [];
 
+  // Ground every phase in the full EVVM stack reference so the model
+  // understands what each core contract does and what must change to test
+  // the EIP. Fetched once and cached; empty string if unavailable.
+  const evvmDocs = await getEvvmContext();
+
   const systemContent =
     systemPromptFor(phase) +
+    (evvmDocs
+      ? `\n\n--- EVVM STACK REFERENCE (evvm.info/llms-full.txt) ---\n${evvmDocs}\n--- END EVVM STACK REFERENCE ---`
+      : "") +
     (body.eipContext
       ? `\n\n--- EIP MATERIAL PROVIDED BY THE USER ---\n${body.eipContext}\n--- END EIP MATERIAL ---`
       : "");

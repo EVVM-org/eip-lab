@@ -136,16 +136,15 @@ export interface RecommendedModel {
  * pricing page (standard tier).
  */
 export const RECOMMENDED_MODELS: Record<string, readonly RecommendedModel[]> = {
+  // Top-tier, large-context only. The deep-research flow injects the full
+  // EVVM stack reference (evvm.info/llms-full.txt) plus the EIP, so models
+  // need big context windows (>=400k) to hold it all. Small-context coders
+  // (e.g. qwen3-coder at 256k) are intentionally NOT offered here.
   venice: [
     {
-      id: "qwen3-coder-480b-a35b-instruct-turbo",
+      id: "deepseek-v4-pro",
       tier: "default",
-      note: "Coder · 65k output · 256k ctx · cheap — best all-round",
-    },
-    {
-      id: "openai-gpt-53-codex",
-      tier: "premium",
-      note: "Codex · 128k output · 400k ctx — top code quality",
+      note: "1M ctx · strong code · holds the full EVVM docs",
     },
     {
       id: "claude-opus-4-8",
@@ -155,27 +154,7 @@ export const RECOMMENDED_MODELS: Record<string, readonly RecommendedModel[]> = {
     {
       id: "claude-sonnet-4-6",
       tier: "balanced",
-      note: "Strong quality/price balance · 64k output",
-    },
-    {
-      id: "deepseek-v4-pro",
-      tier: "value",
-      note: "1M ctx · strong code · low cost",
-    },
-    {
-      id: "deepseek-v4-flash",
-      tier: "value",
-      note: "Cheapest viable full run · 1M ctx",
-    },
-    {
-      id: "zai-org-glm-5",
-      tier: "balanced",
-      note: "Solid mid-tier coder · 198k ctx",
-    },
-    {
-      id: "qwen3-5-397b-a17b",
-      tier: "balanced",
-      note: "Large MoE · 32k output",
+      note: "Strong quality/price balance · 1M ctx",
     },
   ],
   openai: [
@@ -211,28 +190,6 @@ export const RECOMMENDED_MODELS: Record<string, readonly RecommendedModel[]> = {
       supportsReasoning: true,
       inputUsdPerMtok: 2.5,
       outputUsdPerMtok: 15,
-    },
-    {
-      id: "gpt-5.1",
-      tier: "value",
-      note: "Capable + cheaper · 400k ctx",
-      contextTokens: 400000,
-      maxCompletionTokens: 128000,
-      optimizedForCode: true,
-      supportsReasoning: true,
-      inputUsdPerMtok: 1.25,
-      outputUsdPerMtok: 10,
-    },
-    {
-      id: "gpt-5.4-mini",
-      tier: "value",
-      note: "Cheapest viable full run · 400k ctx",
-      contextTokens: 400000,
-      maxCompletionTokens: 128000,
-      optimizedForCode: true,
-      supportsReasoning: true,
-      inputUsdPerMtok: 0.75,
-      outputUsdPerMtok: 4.5,
     },
   ],
 };
