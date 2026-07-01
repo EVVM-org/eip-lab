@@ -36,6 +36,7 @@ sources.
 | 2026-06-03 | 8182 | Venice | qwen3-coder-480b-a35b-instruct-turbo | vercel | 160,608 | 9,233 | 169,841 | $0.0701 | 6 | yes | no¹ | B |
 | 2026-06-03 | 8182 | Venice | deepseek-v4-pro | vercel | 237,178 | 11,962 | 249,140 | $0.4557 | 7 | yes² | no³ | B |
 | 2026-06-03 | 8182 | OpenAI | gpt-5.5 | vercel | 167,548 | 24,753 | 192,301 | $1.5803 | 8 | yes⁴ | no⁵ | B |
+| 2026-06-06 | 8182 | deep-research flow (GPT-answerer) | — | vercel | — | — | — | — | 6 | yes⁶ | verified-integration⁷ | B |
 
 ¹ qwen3-coder: residual issues — storage-array slice `history[1:]`,
 `abi.encodePacked(mapping)`, library-constant visibility. Close to
@@ -51,6 +52,13 @@ so tokens/cost are exact, not estimated.
 ⁵ gpt-5.5: closest to compilable of any run — blocked only by a single
 dropped `{` in one mock's constructor. Correct frontier Merkle, no
 fabrication, no welds dropping functions. See the run file.
+⁶ deep-research flow: first run of the redesigned pipeline (upload →
+≤5 Q&A grounded in the full EVVM docs → .sol); converged in 3 exchanges.
+⁷ "verified-integration": not compiled here, but the EVVM integration is
+verified CORRECT against the real testnet-contracts — `requestPay`,
+`makeCaPay`, and `validateAndConsumeNonce` signatures all match. Prior
+blocking-defect classes (fabrication, whole-Core rewrite, continue welds)
+are absent. Cosmetic/admin cleanups remain. See the run file.
 
 > Two earlier deepseek-v4-pro attempts on this EIP are NOT logged as data
 > rows: both failed in ways since fixed in the product, not in the model.
@@ -146,6 +154,23 @@ fabrication, no welds dropping functions. See the run file.
   returns a usage chunk, so OpenAI rows are measured. Venice streaming
   omits usage, so those completion counts are estimated (~4 chars/token).
   Treat the OpenAI row as the calibration point when comparing costs.
+
+- **Grounding in the full EVVM docs is the biggest single quality jump.**
+  The 2026-06-06 deep-research run (EVVM `llms-full.txt` injected) produced
+  code that uses the REAL inherited `EvvmService` wrappers — `requestPay`,
+  `makeCaPay` — with signatures verified correct against the actual
+  testnet-contracts, plus `validateAndConsumeNonce`. Pre-grounding runs
+  invented host-chain ERC-20 custody or guessed signatures. Correct
+  EVVM-native integration is now the default, not luck. The flow also
+  self-surfaced a real security fix (two-signature `depositSigned` to bind
+  the note params against fisher mutation) — meta-transaction threat
+  modeling, not boilerplate.
+- **The ≤5-question research phase converges fast.** The 8182 run settled a
+  defensible happy path in 3 exchanges. The cap is not a practical
+  constraint for a well-scoped EIP.
+- **GPT-as-answerer is a usable harness** to exercise the flow without a
+  human — good for generating runs, with the caveat that answerer and Lab
+  can share model-family blind spots.
 
 - **"Compiles" is now tracked** as a column. Current product goal is
   documented-readable .sol, but compile-readiness is the strongest single
