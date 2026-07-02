@@ -268,6 +268,7 @@ export async function POST(req: NextRequest) {
             prompt_tokens: Math.ceil(promptChars / 4),
             completion_tokens: Math.ceil(outChars / 4),
             total_tokens: Math.ceil((promptChars + outChars) / 4),
+            cached_tokens: 0,
           };
         }
         if (usage) {
@@ -275,6 +276,7 @@ export async function POST(req: NextRequest) {
           console.log(
             `[lab/chat] provider=${providerId} model=${model} phase=${phase} ` +
               `prompt_tokens=${usage.prompt_tokens} ` +
+              `cached_tokens=${usage.cached_tokens ?? 0} ` +
               `completion_tokens=${usage.completion_tokens} ` +
               `total_tokens=${usage.total_tokens} estimated=${estimated}`,
           );

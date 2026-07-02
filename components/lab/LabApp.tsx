@@ -54,7 +54,12 @@ export default function LabApp() {
   // Non-fatal context-trim notice (large EIP / docs trimmed to fit).
   const [notice, setNotice] = useState<string | null>(null);
 
-  const [tokens, setTokens] = useState({ prompt: 0, completion: 0, total: 0 });
+  const [tokens, setTokens] = useState({
+    prompt: 0,
+    completion: 0,
+    total: 0,
+    cached: 0,
+  });
   const [costUsd, setCostUsd] = useState(0);
   const [files, setFiles] = useState<LabFile[]>([]);
   const [contractsRaw, setContractsRaw] = useState("");
@@ -157,6 +162,8 @@ export default function LabApp() {
             optimizedForCode: apiM?.optimizedForCode ?? r.optimizedForCode,
             supportsReasoning: apiM?.supportsReasoning ?? r.supportsReasoning,
             inputUsdPerMtok: apiM?.inputUsdPerMtok ?? r.inputUsdPerMtok,
+            cachedInputUsdPerMtok:
+              apiM?.cachedInputUsdPerMtok ?? r.cachedInputUsdPerMtok,
             outputUsdPerMtok: apiM?.outputUsdPerMtok ?? r.outputUsdPerMtok,
           } as ModelInfo;
         })
@@ -509,16 +516,25 @@ export default function LabApp() {
       setError(softError); // soft warning kept if partial; null clears on success
 
       if (usage) {
+        const cachedTok = usage.cached_tokens ?? 0;
         setTokens((t) => ({
           prompt: t.prompt + (usage!.prompt_tokens ?? 0),
           completion: t.completion + (usage!.completion_tokens ?? 0),
           total: t.total + (usage!.total_tokens ?? 0),
+          cached: t.cached + cachedTok,
         }));
         const inUsd = selectedModel?.inputUsdPerMtok;
         const outUsd = selectedModel?.outputUsdPerMtok;
+        // Cached prefix (the ~290k EVVM docs, re-sent each exchange) bills at
+        // the model's cached-input rate — ~10% on GPT-5. Fall back to full
+        // input price when the provider/model reports no cached rate.
+        const cachedUsd = selectedModel?.cachedInputUsdPerMtok ?? inUsd;
         if (inUsd != null && outUsd != null) {
+          const promptTok = usage.prompt_tokens ?? 0;
+          const uncachedTok = Math.max(0, promptTok - cachedTok);
           const cost =
-            ((usage.prompt_tokens ?? 0) / 1e6) * inUsd +
+            (uncachedTok / 1e6) * inUsd +
+            (cachedTok / 1e6) * (cachedUsd ?? inUsd) +
             ((usage.completion_tokens ?? 0) / 1e6) * outUsd;
           setCostUsd((c) => c + cost);
         }
@@ -575,7 +591,7 @@ License: EVVM Noncommercial License v1.0
     setFiles([]);
     setContractsRaw("");
     setTruncated(false);
-    setTokens({ prompt: 0, completion: 0, total: 0 });
+    setTokens({ prompt: 0, completion: 0, total: 0, cached: 0 });
     setCostUsd(0);
     setError(null);
     setNotice(null);
@@ -889,9 +905,15 @@ License: EVVM Noncommercial License v1.0
                     : "—"}
               </span>
             </div>
+            {tokens.cached > 0 && (
+              <p className="mt-2 font-[family-name:var(--font-mono)] text-[9px] text-[var(--color-matrix)]">
+                ♻ {tokens.cached.toLocaleString()} cached prompt tok billed at
+                the cached rate — extra research exchanges are cheap.
+              </p>
+            )}
             <p className="mt-2 font-[family-name:var(--font-mono)] text-[9px] text-[var(--color-text-dim)]">
               {selectedModel?.inputUsdPerMtok != null
-                ? "estimated from the model's per-Mtok pricing × tokens used. logged anonymously for EVVM's AI + EIP cost research."
+                ? "estimated from the model's per-Mtok pricing (cache-aware) × tokens used. logged anonymously for EVVM's AI + EIP cost research."
                 : "pick a model with pricing to see live cost. counts logged for EVVM's AI + EIP cost research."}
             </p>
           </WindowFrame>

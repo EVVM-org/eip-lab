@@ -117,6 +117,8 @@ export interface RecommendedModel {
   supportsReasoning?: boolean;
   /** USD per 1M input (prompt) tokens. */
   inputUsdPerMtok?: number;
+  /** USD per 1M cached-input tokens (repeated prefix). ~10% of input on GPT-5. */
+  cachedInputUsdPerMtok?: number;
   /** USD per 1M output (completion) tokens. */
   outputUsdPerMtok?: number;
 }
@@ -169,6 +171,7 @@ export const RECOMMENDED_MODELS: Record<string, readonly RecommendedModel[]> = {
       optimizedForCode: true,
       supportsReasoning: true,
       inputUsdPerMtok: 5,
+      cachedInputUsdPerMtok: 0.5,
       outputUsdPerMtok: 30,
     },
     {
@@ -180,6 +183,7 @@ export const RECOMMENDED_MODELS: Record<string, readonly RecommendedModel[]> = {
       optimizedForCode: true,
       supportsReasoning: true,
       inputUsdPerMtok: 30,
+      // pro tier: OpenAI lists no separate cached rate; bill cache at full input.
       outputUsdPerMtok: 180,
     },
     {
@@ -191,6 +195,7 @@ export const RECOMMENDED_MODELS: Record<string, readonly RecommendedModel[]> = {
       optimizedForCode: true,
       supportsReasoning: true,
       inputUsdPerMtok: 2.5,
+      cachedInputUsdPerMtok: 0.25,
       outputUsdPerMtok: 15,
     },
   ],
