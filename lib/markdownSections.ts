@@ -6,7 +6,7 @@
  * ordered list of {title, body} sections.
  *
  * Intentionally regex-based, not a full markdown parser. Sufficient
- * for the well-shaped justification.md documents the skill produces.
+ * for the well-shaped justification.md documents the Lab produces.
  */
 
 export interface MarkdownSection {
