@@ -38,12 +38,12 @@ export default function DemoPicker() {
             // demos
           </p>
           <h2 className="text-4xl leading-tight md:text-5xl">
-            <GlitchText color="cyan">Three EIPs, three shapes</GlitchText>
+            <GlitchText color="cyan">Three EIPs, three experiments</GlitchText>
           </h2>
           <p className="mt-4 max-w-2xl text-[var(--color-text-muted)]">
-            One Core-modification, one new-service, one mock-heavy
-            shielded-pool service. Open the demo to explore the contracts,
-            or download the EVVM package directly.
+            A Core modification (shape A) and two new services (shape B) — a
+            frame router and a mock-heavy shielded pool. Open a demo to
+            explore the contracts, or download the EVVM package directly.
           </p>
         </header>
 
@@ -78,6 +78,9 @@ export default function DemoPicker() {
                       </div>
                     </div>
 
+                    <p className="mb-1 font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-widest text-[var(--color-text-dim)]">
+                      {d.shapeLabel}
+                    </p>
                     <h3 className="mb-2 text-base leading-tight font-semibold">
                       {d.shortTitle}
                     </h3>
