@@ -39,6 +39,7 @@ sources.
 | 2026-06-06 | 8182 | OpenAI gpt-5.5 (deep-research, GPT-answerer) | — | vercel | 1,277,192 | 16,569 | 1,293,761 | $6.88 | 6 | yes⁶ | verified-integration⁷ | B |
 | 2026-06-06 | 8250 | OpenAI gpt-5.5 (deep-research, GPT-answerer) | — | vercel | ~1,140,000 | ~15,000 | ~1,155,000 | ~$6.15 | 3 | yes⁸ | verified-refs⁹ | A |
 | 2026-06-06 | 8141 | OpenAI gpt-5.5 (deep-research, GPT-answerer) | — | vercel | ~926,000 | ~15,000 | ~941,000 | ~$5.09 | 6 | yes¹⁰ | verified-integration¹¹ | B |
+| 2026-06-06 | 8182 | OpenAI gpt-5.5 (deep-research RE-RUN, post-patch) | — | vercel | 960,562 | 17,513 | 978,075 | $5.33 | 7 | yes¹² | verified-integration¹³ | B |
 
 ¹ qwen3-coder: residual issues — storage-array slice `history[1:]`,
 `abi.encodePacked(mapping)`, library-constant visibility. Close to
@@ -77,6 +78,12 @@ atomic-batch rollback via guarded self-call).
 testnet-contracts. Notably REUSED Core's plumbing (delegated sig to
 `validateAndConsumeNonce`) rather than reinventing it — so no fidelity gap.
 Blocked only by one trivial one-line weld. See the run file.
+¹² 8182 re-run: post-patch regression check; single-shot (2 exchanges),
+strict improvement over the first 8182 run on every axis.
+¹³ "verified-integration": integration verified against real
+testnet-contracts; single-shot with NO welds in code; immutable verifier,
+shared clean Merkle update, real backing invariant. Cheaper ($5.33 vs
+$6.88) than the first 8182 run because no continuations. See the run file.
 
 > Two earlier deepseek-v4-pro attempts on this EIP are NOT logged as data
 > rows: both failed in ways since fixed in the product, not in the model.
