@@ -8,7 +8,7 @@ const STAGES = [
     accent: "pink" as const,
     title: "Alpha — testable",
     status: "now" as const,
-    body: "Where we are today. A very alpha, testable version: bring an EIP and your own provider key, run the four phases, get documented Solidity. Rough edges, breaking changes, output not guaranteed to compile.",
+    body: "Where we are today. A very alpha, testable version: bring an EIP and your own provider key, run the three phases, get documented Solidity. Rough edges, breaking changes, output not guaranteed to compile.",
   },
   {
     n: "02",

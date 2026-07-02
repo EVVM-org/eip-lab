@@ -2,13 +2,13 @@
  * System prompts for each phase of the EVVM EIP Lab flow.
  *
  * The Lab is a turn-based assistant that takes an EIP and produces
- * documented Solidity for the EVVM stack. Four phases:
+ * documented Solidity for the EVVM stack. Three phases:
  *
  *   1. upload    — collect the EIP (handled client-side; no AI call)
- *   2. summarize — read the EIP and AGREE WITH THE USER on what it is
- *                  (a conversation, NOT a fixed-length summary)
- *   3. map       — technical decisions + Q&A on how it maps onto EVVM
- *   4. contracts — emit the documented .sol files
+ *   2. research  — deep research grounded in the full EVVM stack docs;
+ *                  ≤5 Q&A to converge on the happy path (which shape,
+ *                  which contracts, which deps to mock/vendor/defer)
+ *   3. contracts — emit the documented .sol files (+ optional review pass)
  *
  * These prompts intentionally do NOT promise scaffold-evvm or any
  * downstream tooling. The product is: documented Solidity, end of flow.

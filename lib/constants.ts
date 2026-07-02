@@ -68,10 +68,12 @@ export const PROVIDERS: readonly ProviderConfig[] = [
     baseUrl: "https://api.venice.ai/api/v1",
     keyUrl: "https://venice.ai/settings/api",
     docsUrl: "https://docs.venice.ai/api-reference/api-spec",
+    // Top-tier, large-context only (matches RECOMMENDED_MODELS.venice) so a
+    // /models failure never offers a small-context model that can't hold the
+    // full EVVM docs.
     fallbackModels: [
-      "qwen3-coder-480b-a35b-instruct-turbo",
-      "openai-gpt-53-codex",
       "deepseek-v4-pro",
+      "claude-opus-4-8",
       "claude-sonnet-4-6",
     ],
     enabled: true,

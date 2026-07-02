@@ -14,7 +14,8 @@ const QAS: QA[] = [
       <>
         Yes — that&apos;s the whole point.{" "}
         <a href="/lab">Launch the Lab</a>, pick a provider, paste your API
-        key, drop in an EIP (text or links), and walk the four phases.
+        key, drop in an EIP (text, a file, or links), and walk the three
+        phases.
         The examples below are pre-baked runs so you can see the output
         shape before you spend a token.
       </>
