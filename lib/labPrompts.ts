@@ -112,6 +112,43 @@ function names — Solidity 0.8.30):
   function getEvvmID() external view returns (uint256);
   function isAddressStaker(address user) external view returns (bool);
 New services extend EvvmService (constructor (address core, address staking)).
+
+EVVM HELPER CHEATSHEET — reuse these REAL helpers; do NOT hand-roll
+equivalents. EVVM already ships the plumbing below (verified signatures);
+inventing your own recovery/error/payment code is a fidelity error.
+
+- Signatures are EIP-191 over a STRING of comma-joined values — NOT
+  keccak256(abi.encode(...)) and NOT raw ecrecover. Use EVVM's recover:
+    library SignatureRecover {
+      // message is a plain string; hashes as
+      // "\x19Ethereum Signed Message:\n" + len(message) + message
+      function recoverSigner(string memory message, bytes memory signature)
+        internal pure returns (address);
+    }
+    library SignatureUtil {
+      // builds "{evvmID},{functionName},{inputs}" then recovers == expectedSigner
+      function verifySignature(uint256 evvmID, string memory functionName,
+        string memory inputs, bytes memory signature, address expectedSigner)
+        internal pure returns (bool);
+    }
+  Prefer letting Core verify: pass a bytes32 hashPayload to
+  core.validateAndConsumeNonce(...) and let Core do recovery. Only when an
+  EIP forces a NEW signature-verifying entrypoint should you recover
+  directly — and then use SignatureRecover.recoverSigner over an EVVM-style
+  comma-joined STRING message, never abi.encode + ecrecover.
+- Payment/nonce wrappers already provided by EvvmService (via CoreExecution),
+  call them as inherited internal functions — do not re-implement:
+    function requestPay(address from, address token, uint256 amount,
+      uint256 priorityFee, address originExecutor, uint256 nonce,
+      bool isAsyncExec, bytes memory signature) internal;   // pulls funds via core.pay
+    function makeCaPay(address to, address token, uint256 amount) internal;   // core.caPay
+    function makeDisperseCaPay(CoreStructs.DisperseCaPayMetadata[] memory toData,
+      address token, uint256 amount) internal;
+- getEvvmID() and getPrincipalTokenAddress() are the ONLY extra public
+  methods EvvmService adds; getEvvmID() is external, so call this.getEvvmID()
+  if you need it inside the contract.
+- EVVM contracts revert via a shared Error library (e.g. Error.SenderMismatch()),
+  not per-file ad-hoc errors — reuse it where an equivalent already exists.
 `.trim();
 
 const GROUNDING_RULE = `

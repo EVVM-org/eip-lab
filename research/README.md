@@ -38,6 +38,7 @@ sources.
 | 2026-06-03 | 8182 | OpenAI | gpt-5.5 | vercel | 167,548 | 24,753 | 192,301 | $1.5803 | 8 | yes⁴ | no⁵ | B |
 | 2026-06-06 | 8182 | OpenAI gpt-5.5 (deep-research, GPT-answerer) | — | vercel | 1,277,192 | 16,569 | 1,293,761 | $6.88 | 6 | yes⁶ | verified-integration⁷ | B |
 | 2026-06-06 | 8250 | OpenAI gpt-5.5 (deep-research, GPT-answerer) | — | vercel | ~1,140,000 | ~15,000 | ~1,155,000 | ~$6.15 | 3 | yes⁸ | verified-refs⁹ | A |
+| 2026-06-06 | 8141 | OpenAI gpt-5.5 (deep-research, GPT-answerer) | — | vercel | ~926,000 | ~15,000 | ~941,000 | ~$5.09 | 6 | yes¹⁰ | verified-integration¹¹ | B |
 
 ¹ qwen3-coder: residual issues — storage-array slice `history[1:]`,
 `abi.encodePacked(mapping)`, library-constant visibility. Close to
@@ -68,6 +69,14 @@ and the external `getEvvmID()` (model used `this.getEvvmID()` and flagged
 the gotcha) all match testnet-contracts Core.sol. Main gap: it reinvents
 EVVM's signature-recovery/error plumbing instead of reusing it. See the
 run file.
+¹⁰ 8141 deep-research: Shape B frame-transaction router; converged in 3
+exchanges; cleanest Shape-B design (correct SENDER/logicalSender handling,
+atomic-batch rollback via guarded self-call).
+¹¹ "verified-integration": `requestPay`, `makeCaPay`, and
+`validateAndConsumeNonce` usages all verified against real
+testnet-contracts. Notably REUSED Core's plumbing (delegated sig to
+`validateAndConsumeNonce`) rather than reinventing it — so no fidelity gap.
+Blocked only by one trivial one-line weld. See the run file.
 
 > Two earlier deepseek-v4-pro attempts on this EIP are NOT logged as data
 > rows: both failed in ways since fixed in the product, not in the model.
@@ -177,6 +186,15 @@ run file.
 - **The ≤5-question research phase converges fast.** Both the 8182 and 8250
   runs settled a defensible happy path in 3 exchanges. The cap is not a
   practical constraint for a well-scoped EIP.
+- **The "reinvents EVVM plumbing" gap is SHAPE-DEPENDENT.** 8141 (Shape B)
+  reused Core's existing `validateAndConsumeNonce`, so it never wrote its
+  own recovery and got integration right. 8250 (Shape A) added a NEW Core
+  entrypoint, had to implement recovery, and did it the non-EVVM way
+  (`keccak256(abi.encode)` + raw `ecrecover`) instead of EVVM's
+  string-based `SignatureRecover.recoverSigner` /
+  `SignatureUtil.verifySignature`. Fix applied: inject an EVVM helper
+  cheatsheet (real signature-lib + CoreExecution wrapper signatures) so new
+  entrypoints reuse EVVM's plumbing.
 - **Shape A works and is correctly scoped (8250).** Given a nonce-invariant
   EIP, the grounded flow chose "modify Core" and emitted a marker-delimited
   additive diff whose references to real Core state/functions are verified
