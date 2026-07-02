@@ -254,15 +254,19 @@ export default function LabApp() {
       .join("\n\n");
     const ctx = [eipText.trim(), fetchedStr].filter(Boolean).join("\n\n");
 
-    // Reject bare-URL / too-thin input — this is what caused the
-    // model to hallucinate the wrong EIP before.
+    // Block only near-empty / bare-URL input (which caused the model to
+    // hallucinate an EIP from its number before). A short but real draft
+    // IS allowed through — the research phase can help draft/sharpen a
+    // rough or experimental proposal, so we keep this floor low.
     const contentLen = ctx.replace(/https?:\/\/\S+/g, "").trim().length;
-    if (contentLen < 400) {
+    if (contentLen < 80) {
       setBusy(false);
       setError(
-        "No EIP spec content yet. Paste the EIP text, or use a fetchable link " +
-          "(eips.ethereum.org / raw github / ethereum-magicians / ethresear.ch). " +
-          "I won't guess an EIP from a bare URL.",
+        "Almost nothing to research yet. Paste the EIP text (a rough or " +
+          "experimental draft is fine — the Lab can help sharpen it), upload " +
+          "a .md/.txt, or use a fetchable link (eips.ethereum.org / raw " +
+          "github / ethereum-magicians / ethresear.ch). I won't guess an EIP " +
+          "from a bare URL alone.",
       );
       return;
     }
