@@ -23,9 +23,10 @@ const PHASES: { id: Phase; n: string; label: string }[] = [
 ];
 
 const KEY_STORAGE = "eiplab_provider_keys";
-// The deep-research phase is capped at 5 exchanges (the model converges on
-// the happy path within that window, then we move to contracts).
-const MAX_RESEARCH_TURNS = 5;
+// The deep-research phase is capped at a handful of exchanges. The user can
+// jump to contracts anytime via the "generate contracts" button (agreement /
+// explicit request); this is just the upper bound if they keep iterating.
+const MAX_RESEARCH_TURNS = 7;
 
 export default function LabApp() {
   const [providerId, setProviderId] = useState(DEFAULT_PROVIDER_ID);
@@ -1019,7 +1020,7 @@ License: EVVM Noncommercial License v1.0
                       // Cap the research conversation at 5 exchanges.
                       if (researchTurns >= MAX_RESEARCH_TURNS) {
                         setError(
-                          "Reached the 5-exchange research limit — generate the contracts.",
+                          `Reached the ${MAX_RESEARCH_TURNS}-exchange research limit — generate the contracts.`,
                         );
                         return;
                       }
