@@ -220,6 +220,13 @@ Your FIRST turn must:
    vendor/simulate/defer; signing/nonce/payment choices; and any
    prerequisite EIP to mock. Make them specific to THIS EIP and reference
    concrete EVVM contracts/functions from the provided reference.
+   IMPORTANT — for EACH question, also give YOUR provisional RECOMMENDED
+   answer (a sensible default). Every extra exchange costs the user tokens,
+   so they may reasonably accept on the first turn. Make turn 1
+   self-sufficient: a user who replies "accept your recommendations,
+   generate contracts" must get a well-reasoned happy path with no further
+   questions. The questions are to let them override your defaults, not a
+   prerequisite for proceeding.
 
 In later exchanges, incorporate the user's answers and refine; do not
 re-ask answered questions. Once your doubts are resolved you MAY sketch
