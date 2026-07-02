@@ -21,6 +21,31 @@ export interface ChatUsage {
   prompt_tokens: number;
   completion_tokens: number;
   total_tokens: number;
+  /**
+   * Portion of prompt_tokens served from the provider's prompt cache
+   * (OpenAI: usage.prompt_tokens_details.cached_tokens). Billed at the
+   * model's cached-input rate (~10% of input for the GPT-5 family). 0/undef
+   * if the provider doesn't report caching.
+   */
+  cached_tokens?: number;
+}
+
+/** OpenAI-style usage with the cached-tokens detail we care about. */
+interface RawUsage {
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  total_tokens?: number;
+  prompt_tokens_details?: { cached_tokens?: number };
+}
+
+function normalizeUsage(u: RawUsage | undefined | null): ChatUsage | null {
+  if (!u) return null;
+  return {
+    prompt_tokens: u.prompt_tokens ?? 0,
+    completion_tokens: u.completion_tokens ?? 0,
+    total_tokens: u.total_tokens ?? 0,
+    cached_tokens: u.prompt_tokens_details?.cached_tokens ?? 0,
+  };
 }
 
 export interface ChatResult {
@@ -45,6 +70,8 @@ export interface ModelInfo {
   supportsReasoning?: boolean;
   /** USD per 1M input (prompt) tokens. */
   inputUsdPerMtok?: number;
+  /** USD per 1M cached-input tokens (repeated prefix). ~10% of input on GPT-5. */
+  cachedInputUsdPerMtok?: number;
   /** USD per 1M output (completion) tokens. */
   outputUsdPerMtok?: number;
 }
@@ -165,13 +192,13 @@ export async function chatCompletion(
       finish_reason?: string;
     }>;
     model?: string;
-    usage?: ChatUsage;
+    usage?: RawUsage;
   };
 
   return {
     content: json.choices?.[0]?.message?.content ?? "",
     model: json.model ?? params.model,
-    usage: json.usage ?? null,
+    usage: normalizeUsage(json.usage),
     finishReason: json.choices?.[0]?.finish_reason ?? null,
   };
 }
@@ -327,7 +354,7 @@ export async function* streamChatCompletion(
             delta?: { content?: string; reasoning_content?: string };
             finish_reason?: string;
           }>;
-          usage?: ChatUsage;
+          usage?: RawUsage;
         };
         const d = json.choices?.[0]?.delta;
         // Reasoning delivered as a dedicated field (DeepSeek-style).
@@ -338,7 +365,8 @@ export async function* streamChatCompletion(
         }
         const fr = json.choices?.[0]?.finish_reason;
         if (fr) yield { finishReason: fr };
-        if (json.usage) yield { usage: json.usage };
+        const normalized = normalizeUsage(json.usage);
+        if (normalized) yield { usage: normalized };
       } catch {
         /* skip malformed SSE line */
       }
