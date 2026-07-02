@@ -5,9 +5,13 @@
 | Date | 2026-06-06 |
 | EIP | 8182 — Private ETH and ERC-20 Transfers |
 | Flow | **Deep-research redesign** (upload → ≤5 Q&A grounded in full EVVM docs → .sol) |
-| Lab model | not captured (usage panel not in the paste) |
+| Provider / model | OpenAI · gpt-5.5 (400k ctx, $5/$30 per Mtok) |
 | Answerer | GPT (ChatGPT), acting as the human — answered the Lab's questions |
 | EVVM grounding | full `evvm.info/llms-full.txt` injected (~290k tokens) |
+| Prompt tokens | 1,277,192 |
+| Completion tokens | 16,569 |
+| Total tokens | 1,293,761 |
+| Est. cost (USD) | $6.88 |
 | Exchanges used | 3 of 5 (converged early) |
 | Implementation shape | B (new service extending EvvmService) — **research-decided, not forced** |
 | Files generated | 6 |

@@ -36,7 +36,8 @@ sources.
 | 2026-06-03 | 8182 | Venice | qwen3-coder-480b-a35b-instruct-turbo | vercel | 160,608 | 9,233 | 169,841 | $0.0701 | 6 | yes | no¹ | B |
 | 2026-06-03 | 8182 | Venice | deepseek-v4-pro | vercel | 237,178 | 11,962 | 249,140 | $0.4557 | 7 | yes² | no³ | B |
 | 2026-06-03 | 8182 | OpenAI | gpt-5.5 | vercel | 167,548 | 24,753 | 192,301 | $1.5803 | 8 | yes⁴ | no⁵ | B |
-| 2026-06-06 | 8182 | deep-research flow (GPT-answerer) | — | vercel | — | — | — | — | 6 | yes⁶ | verified-integration⁷ | B |
+| 2026-06-06 | 8182 | OpenAI gpt-5.5 (deep-research, GPT-answerer) | — | vercel | 1,277,192 | 16,569 | 1,293,761 | $6.88 | 6 | yes⁶ | verified-integration⁷ | B |
+| 2026-06-06 | 8250 | OpenAI gpt-5.5 (deep-research, GPT-answerer) | — | vercel | ~1,140,000 | ~15,000 | ~1,155,000 | ~$6.15 | 3 | yes⁸ | verified-refs⁹ | A |
 
 ¹ qwen3-coder: residual issues — storage-array slice `history[1:]`,
 `abi.encodePacked(mapping)`, library-constant visibility. Close to
@@ -59,6 +60,14 @@ verified CORRECT against the real testnet-contracts — `requestPay`,
 `makeCaPay`, and `validateAndConsumeNonce` signatures all match. Prior
 blocking-defect classes (fabrication, whole-Core rewrite, continue welds)
 are absent. Cosmetic/admin cleanups remain. See the run file.
+⁸ 8250 deep-research: first SHAPE A run — modifies Core.sol as a
+marker-delimited diff (no whole-file rewrite). Converged in 3 exchanges.
+⁹ "verified-refs": the Core diff's references to real Core internals are
+verified correct — `nextSyncNonce[user]`, `canExecuteUserTransaction(...)`,
+and the external `getEvvmID()` (model used `this.getEvvmID()` and flagged
+the gotcha) all match testnet-contracts Core.sol. Main gap: it reinvents
+EVVM's signature-recovery/error plumbing instead of reusing it. See the
+run file.
 
 > Two earlier deepseek-v4-pro attempts on this EIP are NOT logged as data
 > rows: both failed in ways since fixed in the product, not in the model.
@@ -165,9 +174,21 @@ are absent. Cosmetic/admin cleanups remain. See the run file.
   self-surfaced a real security fix (two-signature `depositSigned` to bind
   the note params against fisher mutation) — meta-transaction threat
   modeling, not boilerplate.
-- **The ≤5-question research phase converges fast.** The 8182 run settled a
-  defensible happy path in 3 exchanges. The cap is not a practical
-  constraint for a well-scoped EIP.
+- **The ≤5-question research phase converges fast.** Both the 8182 and 8250
+  runs settled a defensible happy path in 3 exchanges. The cap is not a
+  practical constraint for a well-scoped EIP.
+- **Shape A works and is correctly scoped (8250).** Given a nonce-invariant
+  EIP, the grounded flow chose "modify Core" and emitted a marker-delimited
+  additive diff whose references to real Core state/functions are verified
+  correct — closing the previously-untested core-modification path with no
+  recreate-Core failure. The "let the research decide A/B/C" change is
+  validated: 8182→B, 8250→A, both correct.
+- **Grounding roughly QUADRUPLED cost — and prompt caching is the fix.**
+  Grounded gpt-5.5 runs cost ~$6–7 (≈1.2–1.3M tokens) vs $1.58 ungrounded,
+  because the ~290k-token EVVM reference is re-sent every call. Since it's
+  identical bytes each call, a stable cacheable prefix + provider prompt
+  caching (OpenAI bills cached input at ~10%) would remove most of that
+  repeated cost. Top efficiency lever.
 - **GPT-as-answerer is a usable harness** to exercise the flow without a
   human — good for generating runs, with the caveat that answerer and Lab
   can share model-family blind spots.
