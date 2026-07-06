@@ -1,39 +1,30 @@
 import { ReactNode } from "react";
 
 interface WindowFrameProps {
-  /** Title bar text (left side, e.g. "~/eiplab/hero"). */
+  /** Small header label (e.g. "~/eiplab/provider"). */
   title: string;
   children: ReactNode;
   className?: string;
-  /** Color of the title bar gradient. Default: vaporwave pink→purple. */
+  /** Accent used for the header dot. */
   accent?: "pink" | "cyan" | "purple" | "mint";
-  /** Show the [_][□][X] control buttons (right side). */
+  /** Show three muted header dots on the right. */
   controls?: boolean;
-  /** Adds a neon glow around the whole window. */
+  /** Subtle accent ring around the card. */
   glow?: boolean;
   /** No padding around children — children manage their own. */
   flush?: boolean;
 }
 
-const ACCENT_GRADIENT: Record<NonNullable<WindowFrameProps["accent"]>, string> = {
-  pink: "linear-gradient(90deg, var(--color-vp-pink) 0%, var(--color-vp-purple) 100%)",
-  cyan: "linear-gradient(90deg, var(--color-vp-cyan) 0%, var(--color-vp-purple) 100%)",
-  purple:
-    "linear-gradient(90deg, var(--color-vp-purple) 0%, var(--color-vp-pink) 100%)",
-  mint: "linear-gradient(90deg, var(--color-vp-mint) 0%, var(--color-vp-cyan) 100%)",
-};
-
-const ACCENT_GLOW: Record<NonNullable<WindowFrameProps["accent"]>, string> = {
-  pink: "border-glow-pink",
-  cyan: "border-glow-cyan",
-  purple: "border-glow-purple",
-  mint: "border-glow-matrix",
+const ACCENT_DOT: Record<NonNullable<WindowFrameProps["accent"]>, string> = {
+  pink: "var(--color-vp-pink)",
+  cyan: "var(--color-vp-cyan)",
+  purple: "var(--color-vp-purple)",
+  mint: "var(--color-accent)",
 };
 
 /**
- * Win98-style window with chunky 3D bevel chrome, vaporwave-tinted title
- * bar, and optional [_][□][X] controls. Body is dark for terminal/cyberpunk
- * content; chrome stays gray-Win98 for the contrast.
+ * Minimalist card with a quiet header row (small mono label + accent dot).
+ * Flat surface, subtle border, rounded corners — no bevel, no glow.
  */
 export default function WindowFrame({
   title,
@@ -46,58 +37,38 @@ export default function WindowFrame({
 }: WindowFrameProps) {
   return (
     <div
-      className={`win98-window pixel-edge p-1 flex flex-col ${
-        glow ? ACCENT_GLOW[accent] : ""
+      className={`flex flex-col overflow-hidden rounded-[10px] border bg-[var(--color-bg-card)] ${
+        glow
+          ? "border-[var(--color-border-strong)] shadow-[0_0_0_1px_rgba(52,211,153,0.14)]"
+          : "border-[var(--color-border)]"
       } ${className}`}
     >
-      {/* Title bar — fixed-size; doesn't shrink */}
-      <div
-        className="flex shrink-0 items-center justify-between px-2 py-1"
-        style={{ background: ACCENT_GRADIENT[accent] }}
-      >
-        <span
-          className="font-[family-name:var(--font-mono)] text-[12px] font-bold text-white"
-          style={{ textShadow: "1px 1px 0 rgba(0,0,0,0.45)" }}
-        >
+      {/* Header */}
+      <div className="flex shrink-0 items-center justify-between border-b border-[var(--color-border)] px-3 py-2">
+        <span className="flex items-center gap-2 font-[family-name:var(--font-mono)] text-[11px] text-[var(--color-text-muted)]">
+          <span
+            className="size-1.5 shrink-0 rounded-full"
+            style={{ background: ACCENT_DOT[accent] }}
+          />
           {title}
         </span>
         {controls && (
-          <div className="flex items-center gap-0.5">
-            <WindowControl label="_" />
-            <WindowControl label="□" />
-            <WindowControl label="X" />
+          <div className="flex items-center gap-1.5" aria-hidden>
+            <span className="size-1.5 rounded-full bg-[var(--color-border-strong)]" />
+            <span className="size-1.5 rounded-full bg-[var(--color-border-strong)]" />
+            <span className="size-1.5 rounded-full bg-[var(--color-border-strong)]" />
           </div>
         )}
       </div>
 
-      {/* Body — takes remaining space, contains overflow so children
-          can scroll independently. min-h-0 is required for flex
-          children to shrink past content size. */}
+      {/* Body */}
       <div
-        className={`bg-[var(--color-bg-card)] ${
+        className={`min-h-0 flex-1 overflow-hidden text-[var(--color-text)] ${
           flush ? "" : "p-5"
-        } text-[var(--color-text)] flex-1 min-h-0 overflow-hidden`}
-        style={{
-          /* Inset bevel for the body (looks "recessed" inside the frame) */
-          boxShadow:
-            "inset 1px 1px 0 var(--color-win-gray-darker), inset -1px -1px 0 var(--color-win-white)",
-        }}
+        }`}
       >
         {children}
       </div>
     </div>
-  );
-}
-
-function WindowControl({ label }: { label: string }) {
-  return (
-    <button
-      type="button"
-      tabIndex={-1}
-      aria-hidden
-      className="bevel-raised hover:bevel-active flex h-4 w-5 items-center justify-center font-[family-name:var(--font-mono)] text-[10px] leading-none text-[var(--color-win-black)]"
-    >
-      {label}
-    </button>
   );
 }

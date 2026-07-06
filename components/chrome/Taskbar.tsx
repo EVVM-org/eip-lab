@@ -4,24 +4,20 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 /**
- * Bottom bar styled as a row of MINIMIZED WINDOWS (terminal-flavored,
- * not a Windows Start menu). Each nav target is a minimized-window
- * chip: a little title-bar-colored tab you can "restore" by clicking.
- * A prominent Launch chip sits on the right with the system clock.
+ * Slim fixed bottom bar: section links on the left, a green "launch"
+ * action and a live clock on the right. Minimal, quiet chrome.
  */
 
-interface MiniWin {
+interface NavLink {
   href: string;
   title: string;
-  accent: string; // css var
-  external?: boolean;
 }
 
-const WINDOWS: MiniWin[] = [
-  { href: "/", title: "~/eiplab", accent: "var(--color-vp-pink)" },
-  { href: "/#how", title: "how_it_works", accent: "var(--color-vp-purple)" },
-  { href: "/#demos", title: "examples", accent: "var(--color-vp-cyan)" },
-  { href: "/#faq", title: "faq.txt", accent: "var(--color-vp-mint)" },
+const LINKS: NavLink[] = [
+  { href: "/", title: "home" },
+  { href: "/#how", title: "how it works" },
+  { href: "/#demos", title: "examples" },
+  { href: "/#faq", title: "faq" },
 ];
 
 export default function Taskbar() {
@@ -30,7 +26,7 @@ export default function Taskbar() {
   useEffect(() => {
     const fmt = () => {
       const d = new Date();
-      return [d.getHours(), d.getMinutes(), d.getSeconds()]
+      return [d.getHours(), d.getMinutes()]
         .map((n) => n.toString().padStart(2, "0"))
         .join(":");
     };
@@ -40,60 +36,31 @@ export default function Taskbar() {
   }, []);
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bevel-raised">
-      <div className="mx-auto flex max-w-[1600px] items-stretch gap-1.5 px-2 py-1.5">
-        {/* Minimized-window chips */}
-        <div className="flex flex-1 items-stretch gap-1.5 overflow-x-auto">
-          {WINDOWS.map((w) => (
-            <MiniWindow key={w.title} win={w} />
+    <div className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-bg-deep)_85%,transparent)] backdrop-blur">
+      <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-2.5">
+        <nav className="flex flex-1 items-center gap-4 overflow-x-auto">
+          {LINKS.map((l) => (
+            <Link
+              key={l.title}
+              href={l.href}
+              className="shrink-0 text-[13px] text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text)]"
+            >
+              {l.title}
+            </Link>
           ))}
-        </div>
+        </nav>
 
-        {/* Launch chip — the highlighted action */}
         <Link
           href="/lab"
-          className="pixel-edge flex shrink-0 items-center gap-2 border-2 border-[var(--color-matrix)] bg-[#07010f] px-3 py-1 font-[family-name:var(--font-mono)] text-[11px] font-bold uppercase tracking-widest text-[var(--color-matrix)] glow-matrix hover:bg-[rgba(51,255,65,0.14)] hover:!filter-none"
+          className="shrink-0 rounded-md bg-[var(--color-accent)] px-3.5 py-1.5 text-[13px] font-medium text-[#07130d] transition-colors hover:bg-[var(--color-accent-strong)]"
         >
-          <span className="size-1.5 bg-[var(--color-matrix)] pulse-glow" />
-          launch lab
+          Launch Lab
         </Link>
 
-        {/* Clock tray */}
-        <div className="bevel-sunken flex shrink-0 items-center px-2.5 py-1 font-[family-name:var(--font-mono)] text-[11px] text-[var(--color-win-black)] tabular-nums">
-          {now || "--:--:--"}
-        </div>
+        <span className="hidden shrink-0 font-[family-name:var(--font-mono)] text-xs tabular-nums text-[var(--color-text-dim)] sm:inline">
+          {now || "--:--"}
+        </span>
       </div>
     </div>
-  );
-}
-
-function MiniWindow({ win }: { win: MiniWin }) {
-  const inner = (
-    <span className="flex items-center gap-2">
-      {/* tiny title-bar swatch — the "minimized window" cue */}
-      <span
-        className="h-3 w-4 shrink-0 border border-black/40"
-        style={{ background: win.accent }}
-      />
-      <span className="truncate font-[family-name:var(--font-mono)] text-[11px] text-[var(--color-win-black)]">
-        {win.title}
-      </span>
-    </span>
-  );
-
-  const cls =
-    "bevel-raised hover:bevel-active flex min-w-[120px] max-w-[180px] items-center px-2 py-1 hover:!filter-none hover:!drop-shadow-none";
-
-  if (win.external) {
-    return (
-      <a href={win.href} target="_blank" rel="noreferrer" className={cls}>
-        {inner}
-      </a>
-    );
-  }
-  return (
-    <Link href={win.href} className={cls}>
-      {inner}
-    </Link>
   );
 }

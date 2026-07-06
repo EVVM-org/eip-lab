@@ -11,61 +11,34 @@ interface PixelButtonProps {
   className?: string;
   size?: "md" | "sm" | "lg";
   download?: boolean | string;
-  /** Render as a <button> instead of a link. */
   onClick?: () => void;
   type?: "button" | "submit";
   disabled?: boolean;
-  /** Wrap the label in [ brackets ] terminal-style. */
+  /** Kept for API compatibility; no longer renders brackets. */
   bracket?: boolean;
 }
 
 /**
- * Cyberpunk-terminal action button. High contrast by design:
- * near-black fill, 2px neon border in the accent color, accent text
- * with always-on glow. On hover the fill lifts toward the accent; on
- * active/press it fully inverts (accent fill, black text) like a
- * terminal keypress. No muddy gray bevel — that's reserved for window
- * chrome.
+ * Minimalist action button. Solid green for primary actions, a quiet
+ * outline for secondary, plain text for ghost. Smooth 150ms hover, a
+ * visible focus ring, rounded corners — no glow, no invert.
  */
-
-const ACCENT: Record<
-  Variant,
-  { border: string; text: string; glow: string; hoverBg: string; activeBg: string }
-> = {
-  primary: {
-    border: "border-[var(--color-vp-pink)]",
-    text: "text-[var(--color-vp-pink)]",
-    glow: "shadow-[0_0_10px_rgba(255,113,206,0.45),inset_0_0_10px_rgba(255,113,206,0.08)]",
-    hoverBg: "hover:bg-[rgba(255,113,206,0.16)]",
-    activeBg: "active:bg-[var(--color-vp-pink)] active:text-black",
-  },
-  secondary: {
-    border: "border-[var(--color-vp-cyan)]",
-    text: "text-[var(--color-vp-cyan)]",
-    glow: "shadow-[0_0_10px_rgba(1,205,254,0.45),inset_0_0_10px_rgba(1,205,254,0.08)]",
-    hoverBg: "hover:bg-[rgba(1,205,254,0.16)]",
-    activeBg: "active:bg-[var(--color-vp-cyan)] active:text-black",
-  },
-  phosphor: {
-    border: "border-[var(--color-matrix)]",
-    text: "text-[var(--color-matrix)]",
-    glow: "shadow-[0_0_10px_rgba(51,255,65,0.45),inset_0_0_10px_rgba(51,255,65,0.08)]",
-    hoverBg: "hover:bg-[rgba(51,255,65,0.16)]",
-    activeBg: "active:bg-[var(--color-matrix)] active:text-black",
-  },
-  ghost: {
-    border: "border-[rgba(255,255,255,0.25)]",
-    text: "text-[var(--color-text-muted)]",
-    glow: "",
-    hoverBg: "hover:bg-[rgba(255,255,255,0.06)] hover:text-[var(--color-text)] hover:border-[var(--color-vp-purple)]",
-    activeBg: "active:bg-[rgba(255,255,255,0.12)]",
-  },
+const VARIANT: Record<Variant, string> = {
+  // green "run" accent, dark text
+  primary:
+    "bg-[var(--color-accent)] text-[#07130d] hover:bg-[var(--color-accent-strong)] border border-transparent",
+  phosphor:
+    "bg-[var(--color-accent)] text-[#07130d] hover:bg-[var(--color-accent-strong)] border border-transparent",
+  secondary:
+    "bg-transparent text-[var(--color-text)] border border-[var(--color-border-strong)] hover:bg-white/[0.04] hover:border-[#3d475c]",
+  ghost:
+    "bg-transparent text-[var(--color-text-muted)] border border-transparent hover:text-[var(--color-text)] hover:bg-white/[0.04]",
 };
 
 const SIZE: Record<NonNullable<PixelButtonProps["size"]>, string> = {
-  lg: "px-7 py-3.5 text-[14px]",
-  md: "px-5 py-2.5 text-[13px]",
-  sm: "px-3 py-1.5 text-[11px]",
+  lg: "px-6 py-3 text-sm",
+  md: "px-4 py-2.5 text-[13px]",
+  sm: "px-3 py-1.5 text-xs",
 };
 
 export default function PixelButton({
@@ -78,15 +51,11 @@ export default function PixelButton({
   onClick,
   type = "button",
   disabled = false,
-  bracket = false,
   className = "",
 }: PixelButtonProps) {
-  const a = ACCENT[variant];
   const base =
-    "pixel-edge inline-flex items-center justify-center gap-2 border-2 bg-[#07010f] font-[family-name:var(--font-mono)] font-bold uppercase tracking-wider transition-all duration-100 disabled:cursor-not-allowed disabled:opacity-40";
-  const classes = `${base} ${SIZE[size]} ${a.border} ${a.text} ${a.glow} ${a.hoverBg} ${a.activeBg} ${className}`;
-
-  const label = bracket ? <>[ {children} ]</> : children;
+    "inline-flex cursor-pointer items-center justify-center gap-2 rounded-md font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-deep)] disabled:cursor-not-allowed disabled:opacity-40";
+  const classes = `${base} ${SIZE[size]} ${VARIANT[variant]} ${className}`;
 
   if (onClick !== undefined || type === "submit") {
     return (
@@ -96,7 +65,7 @@ export default function PixelButton({
         disabled={disabled}
         className={classes}
       >
-        {label}
+        {children}
       </button>
     );
   }
@@ -111,14 +80,14 @@ export default function PixelButton({
         {...(download !== undefined ? { download } : {})}
         className={classes}
       >
-        {label}
+        {children}
       </a>
     );
   }
 
   return (
     <Link href={href} className={classes}>
-      {label}
+      {children}
     </Link>
   );
 }

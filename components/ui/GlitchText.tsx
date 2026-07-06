@@ -3,38 +3,29 @@ import { ReactNode } from "react";
 interface GlitchTextProps {
   children: ReactNode;
   color?: "pink" | "cyan" | "purple" | "mint" | "matrix";
-  /** Use the chunky pixel display font (Press Start 2P) instead of VT323. */
+  /** Kept for API compatibility; no longer changes the font. */
   pixel?: boolean;
-  /** Trigger the glitch animation on hover. */
+  /** Kept for API compatibility; no glitch animation in the minimal theme. */
   hover?: boolean;
   className?: string;
 }
 
 const COLOR: Record<NonNullable<GlitchTextProps["color"]>, string> = {
-  pink: "text-[var(--color-vp-pink)] glow-pink",
-  cyan: "text-[var(--color-vp-cyan)] glow-cyan",
-  purple: "text-[var(--color-vp-purple)] glow-purple",
-  mint: "text-[var(--color-vp-mint)] glow-mint",
-  matrix: "text-[var(--color-matrix)] glow-matrix",
+  pink: "text-[var(--color-vp-pink)]",
+  cyan: "text-[var(--color-vp-cyan)]",
+  purple: "text-[var(--color-vp-purple)]",
+  mint: "text-[var(--color-accent)]",
+  matrix: "text-[var(--color-accent)]",
 };
 
 /**
- * Neon text with optional glitch-on-hover. Used for headline accents.
+ * Accent-colored emphasis span for headline words. Clean and static in
+ * the minimal theme — no glow, no glitch.
  */
 export default function GlitchText({
   children,
   color = "pink",
-  pixel = false,
-  hover = false,
   className = "",
 }: GlitchTextProps) {
-  const font = pixel
-    ? "font-[family-name:var(--font-press-start)]"
-    : "font-[family-name:var(--font-vt323)]";
-  const glitch = hover ? "glitch-hover" : "";
-  return (
-    <span className={`${COLOR[color]} ${font} ${glitch} ${className}`}>
-      {children}
-    </span>
-  );
+  return <span className={`${COLOR[color]} ${className}`}>{children}</span>;
 }

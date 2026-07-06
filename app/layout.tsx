@@ -1,23 +1,14 @@
 import type { Metadata } from "next";
-import { VT323, Press_Start_2P } from "next/font/google";
+import { Inter } from "next/font/google";
 import { GeistMono } from "geist/font/mono";
 import Taskbar from "@/components/chrome/Taskbar";
 import DesktopBg from "@/components/chrome/DesktopBg";
-import CRTOverlay from "@/components/chrome/CRTOverlay";
 import { SITE } from "@/lib/constants";
 import "./globals.css";
 
-const vt323 = VT323({
-  weight: "400",
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-vt323",
-  display: "swap",
-});
-
-const pressStart2P = Press_Start_2P({
-  weight: "400",
-  subsets: ["latin"],
-  variable: "--font-press-start",
+  variable: "--font-sans",
   display: "swap",
 });
 
@@ -52,13 +43,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="en"
-      className={`${GeistMono.variable} ${vt323.variable} ${pressStart2P.variable}`}
-    >
-      <body className="scanlines vignette min-h-screen">
+    <html lang="en" className={`${inter.variable} ${GeistMono.variable}`}>
+      <body className="min-h-screen pb-16">
         <DesktopBg />
-        <CRTOverlay />
         <main>{children}</main>
         <Taskbar />
       </body>

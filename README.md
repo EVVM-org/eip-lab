@@ -55,12 +55,14 @@ under [`research/`](./research)).
 ## Stack
 
 - Next.js 15 (App Router) + React 19, TypeScript strict
-- Tailwind CSS v4 (vaporwave / Win98-bevel / cyberpunk-terminal aesthetic)
+- Tailwind CSS v4 — minimalist dark (OLED slate) design system, Inter +
+  a mono for code, a single green accent (design tokens in
+  `app/globals.css`)
 - Serverless API routes (`runtime = "nodejs"`, streaming) — the BYO-key proxy
 - Shiki for build-time Solidity highlighting (demo viewer)
 - react-markdown + remark-gfm for justification rendering
 - Zero-dependency, store-only ZIP writer (`lib/zip.ts`) for the download
-- Geist Mono + VT323 fonts
+- Inter (UI) + Geist Mono (code) fonts
 - No database, no auth, no stored secrets
 
 ## How the Lab works (backend)

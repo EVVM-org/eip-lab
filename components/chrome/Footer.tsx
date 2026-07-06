@@ -3,38 +3,30 @@ import { SITE, DOCS } from "@/lib/constants";
 
 export default function Footer() {
   return (
-    <footer className="mx-auto mt-20 max-w-7xl px-4 pb-8">
-      <div
-        className="p-5 font-[family-name:var(--font-mono)] text-xs leading-relaxed text-[var(--color-text-muted)]"
-        style={{
-          background: "rgba(13, 13, 21, 0.6)",
-          border: "1px solid rgba(255,255,255,0.08)",
-        }}
-      >
-        <div className="grid gap-6 md:grid-cols-[2fr_1fr_1fr]">
+    <footer className="mx-auto mt-20 max-w-7xl px-4 pb-10">
+      <div className="rounded-[10px] border border-[var(--color-border)] bg-[var(--color-bg-card)] p-6 text-sm leading-relaxed text-[var(--color-text-muted)]">
+        <div className="grid gap-8 md:grid-cols-[2fr_1fr_1fr]">
           <div>
-            <div className="font-[family-name:var(--font-vt323)] text-2xl">
-              <span className="text-[var(--color-vp-pink)] glow-pink">eip</span>
-              <span className="text-[var(--color-vp-cyan)] glow-cyan">lab</span>
-              <span className="cursor-blink ml-0.5 text-[var(--color-matrix)]">▊</span>
+            <div className="text-lg font-semibold text-[var(--color-text)]">
+              EVVM EIP Lab
             </div>
             <p className="mt-2 max-w-md">
               The lab for testing new EIPs on EVVM. Bring an EIP and your
-              own AI key; get documented Solidity + per-contract
+              own AI key; get documented Solidity plus a per-contract
               justification back.
             </p>
           </div>
           <div>
-            <div className="mb-2 text-[var(--color-vp-pink)] uppercase tracking-widest">
-              project
+            <div className="mb-3 text-xs font-medium uppercase tracking-wide text-[var(--color-text-dim)]">
+              Project
             </div>
-            <ul className="space-y-1">
+            <ul className="space-y-2">
               <li>
-                <Link href="/lab">launch lab →</Link>
+                <Link href="/lab">Launch Lab</Link>
               </li>
               <li>
                 <a href={SITE.github} target="_blank" rel="noreferrer">
-                  this repo ↗
+                  This repo ↗
                 </a>
               </li>
               <li>
@@ -45,10 +37,10 @@ export default function Footer() {
             </ul>
           </div>
           <div>
-            <div className="mb-2 text-[var(--color-vp-pink)] uppercase tracking-widest">
-              reference
+            <div className="mb-3 text-xs font-medium uppercase tracking-wide text-[var(--color-text-dim)]">
+              Reference
             </div>
-            <ul className="space-y-1">
+            <ul className="space-y-2">
               <li>
                 <a href={DOCS.eipIndex} target="_blank" rel="noreferrer">
                   EIP index ↗
@@ -56,17 +48,14 @@ export default function Footer() {
               </li>
               <li>
                 <a href={DOCS.license} target="_blank" rel="noreferrer">
-                  license ↗
+                  License ↗
                 </a>
               </li>
             </ul>
           </div>
         </div>
-        <div className="mt-6 flex flex-col gap-1 border-t border-[rgba(255,255,255,0.08)] pt-4 text-[10px] uppercase tracking-widest md:flex-row md:items-center md:justify-between">
-          <span>© {new Date().getFullYear()} mate labs inc · EVVM-NONCOMMERCIAL-1.0</span>
-          <span className="text-[var(--color-matrix)] glow-matrix">
-            <span className="cursor-blink">_</span> running on the edge
-          </span>
+        <div className="mt-8 border-t border-[var(--color-border)] pt-5 text-xs text-[var(--color-text-dim)]">
+          © {new Date().getFullYear()} Mate Labs Inc · EVVM-NONCOMMERCIAL-1.0
         </div>
       </div>
     </footer>
