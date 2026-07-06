@@ -790,7 +790,7 @@ License: EVVM Noncommercial License v1.0
                 <p className="font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-widest text-[var(--color-text-dim)]">
                   paste the EIP — or upload a file
                 </p>
-                <label className="cursor-pointer border border-[var(--color-vp-pink)] px-1.5 py-0.5 font-[family-name:var(--font-mono)] text-[9px] uppercase text-[var(--color-vp-pink)] hover:bg-[rgba(255,0,110,0.1)]">
+                <label className="cursor-pointer border border-[var(--color-accent)] px-1.5 py-0.5 font-[family-name:var(--font-mono)] text-[9px] uppercase text-[var(--color-accent)] hover:bg-[rgba(37,194,160,0.1)]">
                   ↑ upload .md / .txt
                   <input
                     type="file"
@@ -879,7 +879,7 @@ License: EVVM Noncommercial License v1.0
                   : "links are fetched automatically on launch so the model reads the real spec."}
               </p>
               {error && phase === "upload" && (
-                <p className="border-2 border-[var(--color-vp-pink)] bg-[rgba(255,0,110,0.08)] px-2 py-1.5 font-[family-name:var(--font-mono)] text-[10px] text-[var(--color-vp-pink)]">
+                <p className="border-2 border-[var(--color-danger)] bg-[rgba(250,56,62,0.08)] px-2 py-1.5 font-[family-name:var(--font-mono)] text-[10px] text-[var(--color-danger)]">
                   {error}
                 </p>
               )}
@@ -986,7 +986,7 @@ License: EVVM Noncommercial License v1.0
                 style={{ borderColor: "rgba(255,255,255,0.08)" }}
               >
                 {error && (
-                  <span className="font-[family-name:var(--font-mono)] text-[11px] text-[var(--color-vp-pink)]">
+                  <span className="font-[family-name:var(--font-mono)] text-[11px] text-[var(--color-danger)]">
                     {error}
                   </span>
                 )}
@@ -1170,7 +1170,7 @@ function Bubble({ role, content }: { role: string; content: string }) {
       <div
         className={`max-w-[88%] border-2 px-3 py-2 font-[family-name:var(--font-mono)] text-[13px] leading-relaxed ${
           isUser
-            ? "border-[var(--color-vp-pink)] bg-[rgba(255,113,206,0.06)] text-[var(--color-text)]"
+            ? "border-[var(--color-vp-pink)] bg-[rgba(37,194,160,0.06)] text-[var(--color-text)]"
             : "border-[rgba(255,255,255,0.12)] bg-[#0a0014] text-[var(--color-text)]"
         }`}
       >
@@ -1214,7 +1214,7 @@ function FollowUp({
       <button
         type="submit"
         disabled={disabled || !text.trim()}
-        className="border-2 border-[var(--color-vp-purple)] px-3 py-1.5 font-[family-name:var(--font-mono)] text-xs uppercase text-[var(--color-vp-purple)] hover:bg-[rgba(185,103,255,0.12)] disabled:opacity-40"
+        className="border-2 border-[var(--color-vp-purple)] px-3 py-1.5 font-[family-name:var(--font-mono)] text-xs uppercase text-[var(--color-vp-purple)] hover:bg-[rgba(37,194,160,0.12)] disabled:opacity-40"
       >
         send
       </button>

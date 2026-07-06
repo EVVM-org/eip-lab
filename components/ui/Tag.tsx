@@ -16,10 +16,10 @@ interface TagProps {
 }
 
 const VARIANT: Record<TagVariant, string> = {
-  pink: "border-[var(--color-vp-pink)] text-[var(--color-vp-pink)] bg-[rgba(255,113,206,0.08)]",
+  pink: "border-[var(--color-vp-pink)] text-[var(--color-vp-pink)] bg-[rgba(37,194,160,0.08)]",
   cyan: "border-[var(--color-vp-cyan)] text-[var(--color-vp-cyan)] bg-[rgba(1,205,254,0.08)]",
   purple:
-    "border-[var(--color-vp-purple)] text-[var(--color-vp-purple)] bg-[rgba(185,103,255,0.08)]",
+    "border-[var(--color-vp-purple)] text-[var(--color-vp-purple)] bg-[rgba(37,194,160,0.08)]",
   phosphor:
     "border-[var(--color-matrix)] text-[var(--color-matrix)] bg-[rgba(51,255,65,0.08)]",
   matrix:

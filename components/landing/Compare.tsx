@@ -64,7 +64,7 @@ export default function Compare() {
               <tr
                 style={{
                   borderBottom: "1px solid var(--color-vp-purple)",
-                  background: "rgba(185, 103, 255, 0.08)",
+                  background: "rgba(37,194,160, 0.08)",
                 }}
               >
                 <th className="w-1/5 px-4 py-3 font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-widest text-[var(--color-text-dim)]">

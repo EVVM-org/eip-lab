@@ -50,8 +50,8 @@ export default function FileTree({
                     onClick={() => onSelect(c.path)}
                     className={`group flex w-full items-center gap-2 border-l-2 px-3 py-2 text-left transition ${
                       isSelected
-                        ? "border-[var(--color-vp-pink)] bg-[rgba(255,113,206,0.08)] text-[var(--color-text)]"
-                        : "border-transparent text-[var(--color-text-muted)] hover:border-[var(--color-vp-purple)] hover:bg-[rgba(185,103,255,0.05)] hover:text-[var(--color-text)]"
+                        ? "border-[var(--color-vp-pink)] bg-[rgba(37,194,160,0.08)] text-[var(--color-text)]"
+                        : "border-transparent text-[var(--color-text-muted)] hover:border-[var(--color-vp-purple)] hover:bg-[rgba(37,194,160,0.05)] hover:text-[var(--color-text)]"
                     }`}
                   >
                     <span

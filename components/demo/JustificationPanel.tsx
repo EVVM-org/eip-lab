@@ -86,7 +86,7 @@ export default function JustificationPanel({
                 : null;
               return (
                 <details key={sec.title} className="group">
-                  <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-2.5 hover:bg-[rgba(255,113,206,0.04)]">
+                  <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-2.5 hover:bg-[rgba(37,194,160,0.04)]">
                     <span className="text-xs text-[var(--color-vp-pink)] transition-transform group-open:rotate-90">
                       ▶
                     </span>
@@ -163,8 +163,8 @@ function ContractsCascade({
               <summary
                 className={`flex cursor-pointer list-none items-center gap-2 px-3 py-2 font-[family-name:var(--font-mono)] text-xs ${
                   isOpen
-                    ? "bg-[rgba(255,113,206,0.08)] text-[var(--color-vp-pink)]"
-                    : "text-[var(--color-text-muted)] hover:bg-[rgba(185,103,255,0.05)]"
+                    ? "bg-[rgba(37,194,160,0.08)] text-[var(--color-vp-pink)]"
+                    : "text-[var(--color-text-muted)] hover:bg-[rgba(37,194,160,0.05)]"
                 }`}
               >
                 <span className="transition-transform group-open:rotate-90">

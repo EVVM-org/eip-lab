@@ -30,15 +30,17 @@
   --color-matrix: #25c2a0;
   --color-phosphor: #25c2a0;
 
-  /* Secondary accents — EVVM's own palette (cyan, violet, amber, red) */
-  --color-vp-cyan: #54c7ec;
-  --color-vp-pink: #7671df;
-  --color-vp-purple: #7671df;
+  /* Accentuation is EVVM green-dominant: the former pink/purple accents
+     now resolve to the brand green. Cyan stays as the single secondary
+     (links / info); amber + red for warnings / errors. */
+  --color-vp-pink: #25c2a0;
+  --color-vp-purple: #25c2a0;
   --color-vp-mint: #25c2a0;
-  --color-vp-yellow: #ffba00;
+  --color-neon-pink: #25c2a0;
+  --color-neon-magenta: #25c2a0;
+  --color-vp-cyan: #54c7ec;
   --color-neon-cyan: #54c7ec;
-  --color-neon-pink: #7671df;
-  --color-neon-magenta: #7671df;
+  --color-vp-yellow: #ffba00;
   --color-amber: #ffba00;
   --color-danger: #fa383e;
 
