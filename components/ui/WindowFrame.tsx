@@ -39,7 +39,7 @@ export default function WindowFrame({
     <div
       className={`flex flex-col overflow-hidden rounded-[10px] border bg-[var(--color-bg-card)] ${
         glow
-          ? "border-[var(--color-border-strong)] shadow-[0_0_0_1px_rgba(52,211,153,0.14)]"
+          ? "border-[var(--color-border-strong)] shadow-[0_0_0_1px_rgba(37,194,160,0.18)]"
           : "border-[var(--color-border)]"
       } ${className}`}
     >

@@ -22,23 +22,25 @@
   --color-border: #232936;
   --color-border-strong: #313a4d;
 
-  /* Accent — the single "run / success" green */
-  --color-accent: #34d399;
-  --color-accent-strong: #10b981;
-  --color-matrix: #34d399;
-  --color-phosphor: #34d399;
+  /* Accent — EVVM brand green (from evvm.info: primary #25c2a0,
+     signature bright #00ffc3). The single "run / success" accent. */
+  --color-accent: #25c2a0;
+  --color-accent-strong: #1fa588;
+  --color-accent-bright: #00ffc3; /* signature highlight — use sparingly */
+  --color-matrix: #25c2a0;
+  --color-phosphor: #25c2a0;
 
-  /* Restrained secondary accents (info blue, soft violet/indigo, amber) */
-  --color-vp-cyan: #5ea0f2;
-  --color-vp-pink: #b79cf0;
-  --color-vp-purple: #8b93f8;
-  --color-vp-mint: #34d399;
-  --color-vp-yellow: #e5b567;
-  --color-neon-cyan: #5ea0f2;
-  --color-neon-pink: #b79cf0;
-  --color-neon-magenta: #b79cf0;
-  --color-amber: #e5b567;
-  --color-danger: #f1707b;
+  /* Secondary accents — EVVM's own palette (cyan, violet, amber, red) */
+  --color-vp-cyan: #54c7ec;
+  --color-vp-pink: #7671df;
+  --color-vp-purple: #7671df;
+  --color-vp-mint: #25c2a0;
+  --color-vp-yellow: #ffba00;
+  --color-neon-cyan: #54c7ec;
+  --color-neon-pink: #7671df;
+  --color-neon-magenta: #7671df;
+  --color-amber: #ffba00;
+  --color-danger: #fa383e;
 
   /* Legacy "win" chrome names -> slate, so any leftover use stays legible */
   --color-win-gray: #1a2029;
@@ -96,7 +98,7 @@
   }
 
   ::selection {
-    background: rgba(52, 211, 153, 0.25);
+    background: rgba(37, 194, 160, 0.28);
     color: var(--color-text);
   }
 
@@ -164,7 +166,7 @@
     background:
       radial-gradient(
         ellipse 900px 600px at 50% -10%,
-        rgba(52, 211, 153, 0.05) 0%,
+        rgba(37, 194, 160, 0.06) 0%,
         transparent 60%
       ),
       var(--color-bg-deep);
