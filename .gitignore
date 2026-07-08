@@ -46,3 +46,4 @@ yarn-error.log*
 # Generated EVVM packages (built via scripts/build-packages.mjs)
 public/downloads/
 .build-staging/
+.vercel

@@ -282,6 +282,13 @@ that violates any of these is a failure:
 - A 'constant' MUST be initialized at its declaration with a literal.
   For a value computed in the constructor (e.g. a keccak-derived
   domain separator), declare it 'immutable', never 'constant'.
+- ADDRESS LITERALS MUST BE EIP-55 CHECKSUMMED (mixed-case). A 40-hex-digit
+  address written all-lowercase (as EIP specs usually show them, e.g.
+  0xfffffffffffffffffffffffffffffffffffffffe) DOES NOT COMPILE — solc
+  rejects it as "invalid checksum". Convert any address you take from a
+  spec to its checksummed form (e.g.
+  0xffffFFFfFFffffffffffffffFfFFFfffFFFfFFfE), or write it as
+  address(uint160(<hex>)) if you can't checksum it.
 - Use the EVVM Core signatures given above EXACTLY. EvvmService
   constructor is (address core, address staking).
 - Files in dependency order: interfaces and libraries first, then the
